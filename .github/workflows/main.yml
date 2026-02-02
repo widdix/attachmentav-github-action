@@ -1,4 +1,4 @@
-name: Test AttachmentAV Scan
+name: Test attachmentAV Scan
 
 on:
   push:
@@ -6,34 +6,118 @@ on:
       - main
 
 jobs:
-  scan_file:
-    name: Scan file for malware
+  test_scans:
+    name: Test local file, artifact, and release asset scanning
     runs-on: ubuntu-latest
 
     env:
       ACTIONS_STEP_DEBUG: true
-      NODE_DEBUG: fetch
 
     steps:
       # Checkout the repository to access files
       - name: Checkout
         uses: actions/checkout@v6
 
-      # Scan the .gitignore file as a test
-      - name: Scan .gitignore file
-        id: scan
+      # Test 1: Scan local file
+      - name: Scan local .gitignore file
+        id: scan_local
         uses: ./ # Uses the action in the root directory
         with:
           local-file-path: .gitignore
           api-key: ${{ secrets.ATTACHMENTAV_API_KEY }}
           fail-on-infected: true
 
-      # Display scan results
-      - name: Display scan results
+      - name: Display local scan results
         run: |
-          echo "Scan status: ${{ steps.scan.outputs.status }}"
-          echo "File size: ${{ steps.scan.outputs.file-size }} bytes"
-          echo "Real file type: ${{ steps.scan.outputs.real-file-type }}"
-          if [ -n "${{ steps.scan.outputs.finding }}" ]; then
-            echo "Finding: ${{ steps.scan.outputs.finding }}"
+          echo "Scan status: ${{ steps.scan_local.outputs.status }}"
+          echo "File size: ${{ steps.scan_local.outputs.file-size }} bytes"
+          echo "Real file type: ${{ steps.scan_local.outputs.real-file-type }}"
+          if [ -n "${{ steps.scan_local.outputs.finding }}" ]; then
+            echo "Finding: ${{ steps.scan_local.outputs.finding }}"
           fi
+
+      # Test 2: Create and scan artifact
+      - name: Upload .gitignore as artifact
+        id: upload_artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-gitignore
+          path: .gitignore
+
+      - name: Get artifact ID
+        id: get_artifact
+        run: |
+          # Use GitHub API to get the artifact ID
+          ARTIFACT_ID=$(gh api repos/${{ github.repository }}/actions/artifacts \
+            --jq '.artifacts[] | select(.name == "test-gitignore") | .id' | head -n 1)
+          echo "artifact_id=$ARTIFACT_ID" >> $GITHUB_OUTPUT
+          echo "Artifact ID: $ARTIFACT_ID"
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Scan artifact
+        id: scan_artifact
+        uses: ./
+        with:
+          artifact-id: ${{ steps.get_artifact.outputs.artifact_id }}
+          api-key: ${{ secrets.ATTACHMENTAV_API_KEY }}
+          token: ${{ github.token }}
+          fail-on-infected: true
+
+      - name: Display artifact scan results
+        run: |
+          echo "Scan status: ${{ steps.scan_artifact.outputs.status }}"
+          echo "File size: ${{ steps.scan_artifact.outputs.file-size }} bytes"
+          echo "Real file type: ${{ steps.scan_artifact.outputs.real-file-type }}"
+          if [ -n "${{ steps.scan_artifact.outputs.finding }}" ]; then
+            echo "Finding: ${{ steps.scan_artifact.outputs.finding }}"
+          fi
+
+      # Test 3: Create release and scan asset
+      - name: Create release with .gitignore asset
+        id: create_release
+        run: |
+          # Create a test release with .gitignore as an asset
+          TAG_NAME="test-v${{ github.run_number }}"
+          gh release create "$TAG_NAME" .gitignore \
+            --title "Test Release ${{ github.run_number }}" \
+            --notes "Automated test release for attachmentAV scanning" \
+            --repo ${{ github.repository }}
+
+          # Get the asset ID
+          ASSET_ID=$(gh api repos/${{ github.repository }}/releases/tags/$TAG_NAME \
+            --jq '.assets[] | select(.name == ".gitignore") | .id')
+          echo "asset_id=$ASSET_ID" >> $GITHUB_OUTPUT
+          echo "tag_name=$TAG_NAME" >> $GITHUB_OUTPUT
+          echo "Release created: $TAG_NAME"
+          echo "Asset ID: $ASSET_ID"
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Scan release asset
+        id: scan_asset
+        uses: ./
+        with:
+          release-asset-id: ${{ steps.create_release.outputs.asset_id }}
+          api-key: ${{ secrets.ATTACHMENTAV_API_KEY }}
+          token: ${{ github.token }}
+          fail-on-infected: true
+
+      - name: Display release asset scan results
+        run: |
+          echo "Scan status: ${{ steps.scan_asset.outputs.status }}"
+          echo "File size: ${{ steps.scan_asset.outputs.file-size }} bytes"
+          echo "Real file type: ${{ steps.scan_asset.outputs.real-file-type }}"
+          if [ -n "${{ steps.scan_asset.outputs.finding }}" ]; then
+            echo "Finding: ${{ steps.scan_asset.outputs.finding }}"
+          fi
+
+      # Cleanup: Delete test release
+      - name: Cleanup test release
+        if: always()
+        run: |
+          if [ -n "${{ steps.create_release.outputs.tag_name }}" ]; then
+            gh release delete "${{ steps.create_release.outputs.tag_name }}" --yes --cleanup-tag || true
+          fi
+        env:
+          GH_TOKEN: ${{ github.token }}
