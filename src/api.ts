@@ -2,7 +2,7 @@ import * as core from "@actions/core";
 import type { AttachmentAVSyncResponse } from "./types";
 
 const ATTACHMENTAV_SYNC_URL =
-  "https://api.attachmentav.com/v1/scan/sync/binary";
+  "https://eu.developer.attachmentav.com/v1/scan/sync/binary";
 
 export async function scanFileSync(
   buffer: Buffer,
