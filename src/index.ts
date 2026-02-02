@@ -4,14 +4,18 @@ import { scanFileSync } from "./api";
 
 async function run(): Promise<void> {
   try {
+    core.info("Starting AttachmentAV malware scan...");
+
     // Get inputs
     const filePath = core.getInput("file-path", { required: true });
     const apiKey = core.getInput("api-key", { required: true });
     const failOnInfected = core.getBooleanInput("fail-on-infected");
 
     core.info(`Scanning file: ${filePath}`);
+    core.debug(`Working directory: ${process.cwd()}`);
 
     // Read file and check size
+    core.debug("Reading file...");
     const { buffer, size } = await readFileAndCheckSize(filePath);
     core.info(`File size: ${size} bytes`);
 
@@ -55,6 +59,13 @@ async function run(): Promise<void> {
       core.info("File could not be scanned (unsupported file type)");
     }
   } catch (error) {
+    core.error("Action failed with error:");
+    if (error instanceof Error) {
+      core.error(`Message: ${error.message}`);
+      core.error(`Stack: ${error.stack}`);
+    } else {
+      core.error(`Unknown error: ${error}`);
+    }
     core.setFailed((error as Error).message);
   }
 }

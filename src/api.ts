@@ -1,4 +1,4 @@
-import { Readable } from "stream";
+import * as core from "@actions/core";
 import type { AttachmentAVSyncResponse } from "./types";
 
 const ATTACHMENTAV_SYNC_URL =
@@ -8,26 +8,41 @@ export async function scanFileSync(
   buffer: Buffer,
   apiKey: string
 ): Promise<AttachmentAVSyncResponse> {
-  const stream = Readable.from(buffer);
+  core.debug(`Making request to: ${ATTACHMENTAV_SYNC_URL}`);
+  core.debug(`Buffer size: ${buffer.length} bytes`);
+  core.debug(`API key length: ${apiKey.length} characters`);
 
-  const response = await fetch(ATTACHMENTAV_SYNC_URL, {
-    method: "POST",
-    headers: {
-      "x-api-key": apiKey,
-      "Content-Type": "application/octet-stream",
-      "Content-Length": buffer.length.toString(),
-    },
-    body: stream as any,
-    duplex: "half",
-  } as RequestInit);
+  try {
+    // Use buffer directly instead of stream for better compatibility
+    const response = await fetch(ATTACHMENTAV_SYNC_URL, {
+      method: "POST",
+      headers: {
+        "x-api-key": apiKey,
+        "Content-Type": "application/octet-stream",
+        "Content-Length": buffer.length.toString(),
+      },
+      body: buffer,
+    });
 
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(
-      `AttachmentAV API error: ${response.status} ${response.statusText}. ${errorText}`
-    );
+    core.debug(`Response status: ${response.status} ${response.statusText}`);
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      core.error(`API error response: ${errorText}`);
+      throw new Error(
+        `AttachmentAV API error: ${response.status} ${response.statusText}. ${errorText}`
+      );
+    }
+
+    const result = (await response.json()) as AttachmentAVSyncResponse;
+    core.debug(`Scan result: ${JSON.stringify(result)}`);
+    return result;
+  } catch (error) {
+    core.error(`Fetch error details: ${error}`);
+    if (error instanceof Error) {
+      core.error(`Error message: ${error.message}`);
+      core.error(`Error stack: ${error.stack}`);
+    }
+    throw error;
   }
-
-  const result = (await response.json()) as AttachmentAVSyncResponse;
-  return result;
 }

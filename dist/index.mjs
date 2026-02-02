@@ -33,7 +33,6 @@ import require$$5$3 from 'string_decoder';
 import 'child_process';
 import 'timers';
 import * as fs$1 from 'fs/promises';
-import { Readable } from 'stream';
 
 // We use any as a valid input type
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -28021,6 +28020,13 @@ function setFailed(message) {
     error(message);
 }
 /**
+ * Writes debug message to user log
+ * @param message debug message
+ */
+function debug(message) {
+    issueCommand('debug', {}, message);
+}
+/**
  * Adds an error issue
  * @param message error issue message. Errors will be converted to string via toString()
  * @param properties optional properties to add to the annotation.
@@ -28082,33 +28088,51 @@ function formatBytes(bytes) {
 
 const ATTACHMENTAV_SYNC_URL = "https://api.attachmentav.com/v1/scan/sync/binary";
 async function scanFileSync(buffer, apiKey) {
-    const stream = Readable.from(buffer);
-    const response = await fetch(ATTACHMENTAV_SYNC_URL, {
-        method: "POST",
-        headers: {
-            "x-api-key": apiKey,
-            "Content-Type": "application/octet-stream",
-            "Content-Length": buffer.length.toString(),
-        },
-        body: stream,
-        duplex: "half",
-    });
-    if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`AttachmentAV API error: ${response.status} ${response.statusText}. ${errorText}`);
+    debug(`Making request to: ${ATTACHMENTAV_SYNC_URL}`);
+    debug(`Buffer size: ${buffer.length} bytes`);
+    debug(`API key length: ${apiKey.length} characters`);
+    try {
+        // Use buffer directly instead of stream for better compatibility
+        const response = await fetch(ATTACHMENTAV_SYNC_URL, {
+            method: "POST",
+            headers: {
+                "x-api-key": apiKey,
+                "Content-Type": "application/octet-stream",
+                "Content-Length": buffer.length.toString(),
+            },
+            body: buffer,
+        });
+        debug(`Response status: ${response.status} ${response.statusText}`);
+        if (!response.ok) {
+            const errorText = await response.text();
+            error(`API error response: ${errorText}`);
+            throw new Error(`AttachmentAV API error: ${response.status} ${response.statusText}. ${errorText}`);
+        }
+        const result = (await response.json());
+        debug(`Scan result: ${JSON.stringify(result)}`);
+        return result;
     }
-    const result = (await response.json());
-    return result;
+    catch (error$1) {
+        error(`Fetch error details: ${error$1}`);
+        if (error$1 instanceof Error) {
+            error(`Error message: ${error$1.message}`);
+            error(`Error stack: ${error$1.stack}`);
+        }
+        throw error$1;
+    }
 }
 
 async function run() {
     try {
+        info("Starting AttachmentAV malware scan...");
         // Get inputs
         const filePath = getInput("file-path", { required: true });
         const apiKey = getInput("api-key", { required: true });
         const failOnInfected = getBooleanInput("fail-on-infected");
         info(`Scanning file: ${filePath}`);
+        debug(`Working directory: ${process.cwd()}`);
         // Read file and check size
+        debug("Reading file...");
         const { buffer, size } = await readFileAndCheckSize(filePath);
         info(`File size: ${size} bytes`);
         // Scan file using sync API
@@ -28145,8 +28169,16 @@ async function run() {
             info("File could not be scanned (unsupported file type)");
         }
     }
-    catch (error) {
-        setFailed(error.message);
+    catch (error$1) {
+        error("Action failed with error:");
+        if (error$1 instanceof Error) {
+            error(`Message: ${error$1.message}`);
+            error(`Stack: ${error$1.stack}`);
+        }
+        else {
+            error(`Unknown error: ${error$1}`);
+        }
+        setFailed(error$1.message);
     }
 }
 run();

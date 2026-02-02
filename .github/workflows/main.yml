@@ -10,6 +10,9 @@ jobs:
     name: Scan file for malware
     runs-on: ubuntu-latest
 
+    env:
+      ACTIONS_STEP_DEBUG: true
+
     steps:
       # Checkout the repository to access files
       - name: Checkout
