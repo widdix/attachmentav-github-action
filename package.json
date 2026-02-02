@@ -1,0 +1,29 @@
+{
+  "name": "attachmentav-github-action-malware-antivirus-scan",
+  "version": "1.0.0",
+  "description": "",
+  "homepage": "https://github.com/sh-cloud-software/attachmentav-github-action-malware-antivirus-scan#readme",
+  "bugs": {
+    "url": "https://github.com/sh-cloud-software/attachmentav-github-action-malware-antivirus-scan/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sh-cloud-software/attachmentav-github-action-malware-antivirus-scan.git"
+  },
+  "license": "ISC",
+  "author": "Sebastian Hesse <sebastian@sh-cloud.software>",
+  "type": "commonjs",
+  "main": "index.js",
+  "scripts": {
+    "build": "rollup --config rollup.config.mjs"
+  },
+  "dependencies": {
+    "@actions/core": "^3.0.0",
+    "@actions/github": "^9.0.0"
+  },
+  "devDependencies": {
+    "@rollup/plugin-commonjs": "^29.0.0",
+    "@rollup/plugin-node-resolve": "^16.0.3",
+    "rollup": "^4.57.1"
+  }
+}
