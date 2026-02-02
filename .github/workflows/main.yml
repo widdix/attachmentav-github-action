@@ -12,6 +12,7 @@ jobs:
 
     env:
       ACTIONS_STEP_DEBUG: true
+      NODE_DEBUG: http
 
     steps:
       # Checkout the repository to access files
