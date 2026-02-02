@@ -1,4 +1,5 @@
 import * as core from "@actions/core";
+import { Readable } from "node:stream";
 import type { AttachmentAVSyncResponse } from "./types";
 
 const ATTACHMENTAV_SYNC_URL =
@@ -12,6 +13,8 @@ export async function scanFileSync(
   core.debug(`Buffer size: ${buffer.length} bytes`);
   core.debug(`API key length: ${apiKey.length} characters`);
 
+  const stream = Readable.from(buffer);
+
   try {
     // Use buffer directly instead of stream for better compatibility
     const response = await fetch(ATTACHMENTAV_SYNC_URL, {
@@ -21,7 +24,9 @@ export async function scanFileSync(
         "Content-Type": "application/octet-stream",
         "Content-Length": buffer.length.toString(),
       },
-      body: buffer,
+      body: stream as any,
+      // @ts-ignore
+      duplex: "half",
     });
 
     core.debug(`Response status: ${response.status} ${response.statusText}`);
