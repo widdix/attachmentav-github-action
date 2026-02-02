@@ -1,15 +1,27 @@
-name: Hello World
-description: Greet someone and record the time
+name: AttachmentAV Malware Scanner
+description: Scan files for malware and viruses using the AttachmentAV API
 
 inputs:
-  who-to-greet: # id of input
-    description: Who to greet
+  file-path:
+    description: Path to the file in the repository to scan
     required: true
-    default: World
+  api-key:
+    description: AttachmentAV API key (use secrets)
+    required: true
+  fail-on-infected:
+    description: Whether to fail the action if malware is detected
+    required: false
+    default: 'true'
 
 outputs:
-  time: # id of output
-    description: The time we greeted you
+  status:
+    description: Scan result status (clean/infected/no)
+  finding:
+    description: Malware type if infected
+  file-size:
+    description: Size of scanned file in bytes
+  real-file-type:
+    description: Detected file type
 
 runs:
   using: node20

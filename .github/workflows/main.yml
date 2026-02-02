@@ -1,4 +1,4 @@
-name: Test usage of action
+name: Test AttachmentAV Scan
 
 on:
   push:
@@ -6,22 +6,30 @@ on:
       - main
 
 jobs:
-  hello_world_job:
-    name: A job to say hello
+  scan_file:
+    name: Scan file for malware
     runs-on: ubuntu-latest
 
     steps:
-      # To use this repository's private action,
-      # you must check out the repository
+      # Checkout the repository to access files
       - name: Checkout
         uses: actions/checkout@v6
 
-      - name: Hello world action step
-        id: hello
-        uses: ./ # Uses an action in the root directory
+      # Scan the .gitignore file as a test
+      - name: Scan .gitignore file
+        id: scan
+        uses: ./ # Uses the action in the root directory
         with:
-          who-to-greet: Mona the Octocat
+          file-path: .gitignore
+          api-key: ${{ secrets.ATTACHMENTAV_API_KEY }}
+          fail-on-infected: true
 
-      # Use the output from the `hello` step
-      - name: Get the output time
-        run: echo "The time was ${{ steps.hello.outputs.time }}"
+      # Display scan results
+      - name: Display scan results
+        run: |
+          echo "Scan status: ${{ steps.scan.outputs.status }}"
+          echo "File size: ${{ steps.scan.outputs.file-size }} bytes"
+          echo "Real file type: ${{ steps.scan.outputs.real-file-type }}"
+          if [ -n "${{ steps.scan.outputs.finding }}" ]; then
+            echo "Finding: ${{ steps.scan.outputs.finding }}"
+          fi
