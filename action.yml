@@ -2,12 +2,33 @@ name: AttachmentAV Malware Scanner
 description: Scan files for malware and viruses using the AttachmentAV API
 
 inputs:
-  file-path:
-    description: Path to the file in the repository to scan
-    required: true
+  local-file-path:
+    description: Path to local file in the repository to scan (mutually exclusive with artifact-id and release-asset-id)
+    required: false
+  artifact-id:
+    description: GitHub Actions artifact ID to scan (mutually exclusive with local-file-path and release-asset-id)
+    required: false
+  release-asset-id:
+    description: GitHub release asset ID to scan (mutually exclusive with local-file-path and artifact-id)
+    required: false
+  api-endpoint:
+    description: AttachmentAV API endpoint
+    required: false
+    default: 'https://eu.developer.attachmentav.com'
   api-key:
     description: AttachmentAV API key (use secrets)
     required: true
+  token:
+    description: GitHub token or personal access token (PAT) for accessing private artifacts/releases (forwarded to AttachmentAV for download authentication)
+    required: false
+  timeout:
+    description: Timeout in seconds for async polling. Max 1 hour, min 1 second.
+    required: false
+    default: '300'
+  polling-interval:
+    description: Polling interval in seconds for async scans. Max 1 hour, min 1 second.
+    required: false
+    default: '5'
   fail-on-infected:
     description: Whether to fail the action if malware is detected
     required: false

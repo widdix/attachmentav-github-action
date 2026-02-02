@@ -24,7 +24,7 @@ jobs:
         id: scan
         uses: ./ # Uses the action in the root directory
         with:
-          file-path: .gitignore
+          local-file-path: .gitignore
           api-key: ${{ secrets.ATTACHMENTAV_API_KEY }}
           fail-on-infected: true
 
