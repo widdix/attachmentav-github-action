@@ -32712,4 +32712,4 @@ try {
 } catch (error) {
   setFailed(error.message);
 }
-//# sourceMappingURL=index.js.map
+//# sourceMappingURL=index.mjs.map
