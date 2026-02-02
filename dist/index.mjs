@@ -28080,7 +28080,7 @@ async function scanFileSync(apiEndpoint, apiKey, buffer) {
         if (!response.ok) {
             const errorText = await response.text();
             error(`API error response: ${errorText}`);
-            throw new Error(`AttachmentAV API error: ${response.status} ${response.statusText}. ${errorText}`);
+            throw new Error(`attachmentAV API error: ${response.status} ${response.statusText}. ${errorText}`);
         }
         const result = (await response.json());
         debug(`Scan result: ${JSON.stringify(result)}`);
@@ -28114,7 +28114,7 @@ async function submitAsyncScan(apiEndpoint, apiKey, request) {
         if (response.status !== 204 && response.status !== 201 && !response.ok) {
             const errorText = await response.text();
             error(`API error response: ${errorText}`);
-            throw new Error(`AttachmentAV async API error: ${response.status} ${response.statusText}. ${errorText}`);
+            throw new Error(`attachmentAV async API error: ${response.status} ${response.statusText}. ${errorText}`);
         }
         info("Async scan submitted successfully");
     }
@@ -28150,7 +28150,7 @@ async function pollAsyncResult(apiEndpoint, apiKey, traceId, timeoutSeconds, pol
         }
         if (!response.ok) {
             const errorText = await response.text();
-            throw new Error(`AttachmentAV result API error: ${response.status} ${response.statusText}. ${errorText}`);
+            throw new Error(`attachmentAV result API error: ${response.status} ${response.statusText}. ${errorText}`);
         }
         // Result is ready
         const result = (await response.json());

@@ -34,7 +34,7 @@ export async function scanFileSync(
       const errorText = await response.text();
       core.error(`API error response: ${errorText}`);
       throw new Error(
-        `AttachmentAV API error: ${response.status} ${response.statusText}. ${errorText}`
+        `attachmentAV API error: ${response.status} ${response.statusText}. ${errorText}`
       );
     }
 
@@ -78,7 +78,7 @@ export async function submitAsyncScan(
       const errorText = await response.text();
       core.error(`API error response: ${errorText}`);
       throw new Error(
-        `AttachmentAV async API error: ${response.status} ${response.statusText}. ${errorText}`
+        `attachmentAV async API error: ${response.status} ${response.statusText}. ${errorText}`
       );
     }
 
@@ -134,7 +134,7 @@ export async function pollAsyncResult(
     if (!response.ok) {
       const errorText = await response.text();
       throw new Error(
-        `AttachmentAV result API error: ${response.status} ${response.statusText}. ${errorText}`
+        `attachmentAV result API error: ${response.status} ${response.statusText}. ${errorText}`
       );
     }
 
