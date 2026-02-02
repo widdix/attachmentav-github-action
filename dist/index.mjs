@@ -32698,18 +32698,17 @@ Octokit.plugin(restEndpointMethods, paginateRest).defaults(defaults);
 const context = new Context();
 
 try {
-  // `who-to-greet` input defined in action metadata file
-  const nameToGreet = getInput("who-to-greet");
-  info(`Hello ${nameToGreet}!`);
-
-  // Get the current time and set it as an output variable
-  const time = new Date().toTimeString();
-  setOutput("time", time);
-
-  // Get the JSON webhook payload for the event that triggered the workflow
-  const payload = JSON.stringify(context.payload, undefined, 2);
-  info(`The event payload: ${payload}`);
-} catch (error) {
-  setFailed(error.message);
+    // `who-to-greet` input defined in action metadata file
+    const nameToGreet = getInput("who-to-greet");
+    info(`Hello ${nameToGreet}!`);
+    // Get the current time and set it as an output variable
+    const time = new Date().toTimeString();
+    setOutput("time", time);
+    // Get the JSON webhook payload for the event that triggered the workflow
+    const payload = JSON.stringify(context.payload, undefined, 2);
+    info(`The event payload: ${payload}`);
+}
+catch (error) {
+    setFailed(error.message);
 }
 //# sourceMappingURL=index.mjs.map
