@@ -14,7 +14,7 @@ import require$$6 from 'util';
 import require$$0$1 from 'node:assert';
 import require$$0$3 from 'node:net';
 import require$$2 from 'node:http';
-import require$$0$2 from 'node:stream';
+import require$$0$2, { Readable } from 'node:stream';
 import require$$0 from 'node:buffer';
 import require$$0$4 from 'node:util';
 import require$$7 from 'node:querystring';
@@ -28086,11 +28086,13 @@ function formatBytes(bytes) {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
 }
 
-const ATTACHMENTAV_SYNC_URL = "https://api.attachmentav.com/v1/scan/sync/binary";
+// import * as core from "@actions/core";
+const ATTACHMENTAV_SYNC_URL = "https://eu.developer.attachmentav.com/v1/scan/sync/binary";
 async function scanFileSync(buffer, apiKey) {
-    debug(`Making request to: ${ATTACHMENTAV_SYNC_URL}`);
-    debug(`Buffer size: ${buffer.length} bytes`);
-    debug(`API key length: ${apiKey.length} characters`);
+    // core.debug(`Making request to: ${ATTACHMENTAV_SYNC_URL}`);
+    // core.debug(`Buffer size: ${buffer.length} bytes`);
+    // core.debug(`API key length: ${apiKey.length} characters`);
+    const stream = Readable.from(buffer);
     try {
         // Use buffer directly instead of stream for better compatibility
         const response = await fetch(ATTACHMENTAV_SYNC_URL, {
@@ -28100,25 +28102,28 @@ async function scanFileSync(buffer, apiKey) {
                 "Content-Type": "application/octet-stream",
                 "Content-Length": buffer.length.toString(),
             },
-            body: buffer,
+            body: stream,
+            // @ts-ignore
+            duplex: "half",
         });
-        debug(`Response status: ${response.status} ${response.statusText}`);
+        // core.debug(`Response status: ${response.status} ${response.statusText}`);
         if (!response.ok) {
             const errorText = await response.text();
-            error(`API error response: ${errorText}`);
+            // core.error(`API error response: ${errorText}`);
             throw new Error(`AttachmentAV API error: ${response.status} ${response.statusText}. ${errorText}`);
         }
         const result = (await response.json());
-        debug(`Scan result: ${JSON.stringify(result)}`);
+        // core.debug(`Scan result: ${JSON.stringify(result)}`);
         return result;
     }
-    catch (error$1) {
-        error(`Fetch error details: ${error$1}`);
-        if (error$1 instanceof Error) {
-            error(`Error message: ${error$1.message}`);
-            error(`Error stack: ${error$1.stack}`);
-        }
-        throw error$1;
+    catch (error) {
+        console.error(error);
+        // core.error(`Fetch error details: ${error}`);
+        // if (error instanceof Error) {
+        //   core.error(`Error message: ${error.message}`);
+        //   core.error(`Error stack: ${error.stack}`);
+        // }
+        throw error;
     }
 }
 
