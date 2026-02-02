@@ -11,6 +11,10 @@ export interface AttachmentAVAsyncRequest {
   trace_id: string;
 }
 
+export interface AttachmentAVSyncDownloadRequest {
+  download_url: string;
+}
+
 export interface GitHubReleaseAsset {
   id: number;
   name: string;

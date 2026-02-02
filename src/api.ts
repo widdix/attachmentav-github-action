@@ -1,6 +1,10 @@
 import * as core from "@actions/core";
 import { Readable } from "stream";
-import { AttachmentAVResponse, AttachmentAVAsyncRequest } from "./types";
+import {
+  AttachmentAVResponse,
+  AttachmentAVAsyncRequest,
+  AttachmentAVSyncDownloadRequest,
+} from "./types";
 import { sleep } from "./utils";
 
 export async function scanFileSync(
@@ -35,6 +39,48 @@ export async function scanFileSync(
       core.error(`API error response: ${errorText}`);
       throw new Error(
         `attachmentAV API error: ${response.status} ${response.statusText}. ${errorText}`
+      );
+    }
+
+    const result = (await response.json()) as AttachmentAVResponse;
+    core.debug(`Scan result: ${JSON.stringify(result)}`);
+    return result;
+  } catch (error) {
+    core.error(`Fetch error details: ${error}`);
+    if (error instanceof Error) {
+      core.error(`Error message: ${error.message}`);
+      core.error(`Error stack: ${error.stack}`);
+    }
+    throw error;
+  }
+}
+
+export async function scanFileSyncDownload(
+  apiEndpoint: string,
+  apiKey: string,
+  request: AttachmentAVSyncDownloadRequest
+): Promise<AttachmentAVResponse> {
+  const syncDownloadUrl = `${apiEndpoint}/v1/scan/sync/download`;
+  core.debug(`Making sync download request to: ${syncDownloadUrl}`);
+  core.debug(`Download URL: ${request.download_url}`);
+
+  try {
+    const response = await fetch(syncDownloadUrl, {
+      method: "POST",
+      headers: {
+        "x-api-key": apiKey,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(request),
+    });
+
+    core.debug(`Response status: ${response.status} ${response.statusText}`);
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      core.error(`API error response: ${errorText}`);
+      throw new Error(
+        `attachmentAV sync download API error: ${response.status} ${response.statusText}. ${errorText}`
       );
     }
 

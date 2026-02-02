@@ -1,11 +1,22 @@
 import * as core from "@actions/core";
-import { pollAsyncResult, scanFileSync, submitAsyncScan } from "./api";
+import {
+  pollAsyncResult,
+  scanFileSync,
+  scanFileSyncDownload,
+  submitAsyncScan,
+} from "./api";
 import { readFileAndCheckSize } from "./fileUtils";
-import { getArtifact, getReleaseAsset } from "./github";
+import {
+  getActualDownloadUrl,
+  getArtifact,
+  getReleaseAsset,
+} from "./github";
 import { ActionInputs, AttachmentAVResponse } from "./types";
 import { generateTraceId } from "./utils";
 
 const ONE_HOUR_SECONDS = 60 * 60;
+const MB = 1024 * 1024;
+const SYNC_DOWNLOAD_THRESHOLD = 200 * MB;
 
 function getInputs(): ActionInputs {
   const localFilePath = core.getInput("local-file-path");
@@ -68,7 +79,6 @@ async function handleLocalFilePath(apiEndpoint: string, apiKey: string, localFil
   const { buffer, size } = await readFileAndCheckSize(localFilePath);
   core.info(`File size: ${size} bytes`);
 
-  const MB = 1024 * 1024;
   const MAX_SYNC_SIZE = 10 * MB;
 
   if (size <= MAX_SYNC_SIZE) {
@@ -118,26 +128,82 @@ async function submitAndPollAsyncScan(apiEndpoint: string, apiKey: string, downl
   );
 }
 
-async function handleArtifact(apiEndpoint: string, apiKey: string, artifactId: string, options: AsyncOptions) {
+async function handleArtifact(
+  apiEndpoint: string,
+  apiKey: string,
+  artifactId: string,
+  options: AsyncOptions
+): Promise<AttachmentAVResponse> {
   const id = parseInt(artifactId, 10);
   core.info(`Scanning artifact ID: ${id}`);
 
-  const artifact = await getArtifact(id, options.token);
-  core.info(`Artifact: ${artifact.name}, size: ${artifact.size_in_bytes} bytes`);
-  const downloadUrl = artifact.archive_download_url;
+  if (!options.token) {
+    throw new Error("GitHub token is required for scanning artifacts");
+  }
 
-  return submitAndPollAsyncScan(apiEndpoint, apiKey, downloadUrl, options);
+  const artifact = await getArtifact(id, options.token);
+  core.info(
+    `Artifact: ${artifact.name}, size: ${artifact.size_in_bytes} bytes`
+  );
+
+  // Get the actual download URL (valid for 1 minute)
+  const actualDownloadUrl = await getActualDownloadUrl(
+    artifact.archive_download_url,
+    options.token,
+  );
+
+  if (artifact.size_in_bytes < SYNC_DOWNLOAD_THRESHOLD) {
+    // Use sync download API for files < 200MB
+    core.info("Using sync download API (artifact < 200MB)");
+    return scanFileSyncDownload(apiEndpoint, apiKey, {
+      download_url: actualDownloadUrl,
+    });
+  } else {
+    // Use async API for files >= 200MB
+    core.info("Using async API (artifact ≥ 200MB)");
+    return submitAndPollAsyncScan(
+      apiEndpoint,
+      apiKey,
+      actualDownloadUrl,
+      options
+    );
+  }
 }
 
-async function handleReleaseAsset(apiEndpoint: string, apiKey: string, releaseAssetId: string, options: AsyncOptions) {
+async function handleReleaseAsset(
+  apiEndpoint: string,
+  apiKey: string,
+  releaseAssetId: string,
+  options: AsyncOptions
+): Promise<AttachmentAVResponse> {
   const id = parseInt(releaseAssetId, 10);
   core.info(`Scanning release asset ID: ${id}`);
 
   const asset = await getReleaseAsset(id, options.token);
   core.info(`Release asset: ${asset.name}, size: ${asset.size} bytes`);
-  const downloadUrl = asset.url;
 
-  return submitAndPollAsyncScan(apiEndpoint, apiKey, downloadUrl, options);
+  // Get the actual download URL (valid for 1 hour)
+  const actualDownloadUrl = await getActualDownloadUrl(
+    asset.url,
+    options.token,
+  );
+
+  if (asset.size < SYNC_DOWNLOAD_THRESHOLD) {
+    // Use sync download API for files < 200MB
+    core.info("Using sync download API (asset < 200MB)");
+    return scanFileSyncDownload(apiEndpoint, apiKey, {
+      download_url: actualDownloadUrl,
+    });
+  } else {
+    // Use async API for files >= 200MB
+    core.info("Using async API (asset ≥ 200MB)");
+    return submitAndPollAsyncScan(
+      apiEndpoint,
+      apiKey,
+      actualDownloadUrl,
+      options
+    );
+  }
 }
 
 async function run(): Promise<void> {
@@ -165,14 +231,19 @@ async function run(): Promise<void> {
 
   let result: AttachmentAVResponse;
 
-  if (localFilePath) {
-    result = await handleLocalFilePath(apiEndpoint, apiKey, localFilePath);
-  } else if (artifactId) {
-    result = await handleArtifact(apiEndpoint, apiKey, artifactId, { token, timeout, pollingInterval });
-  } else if (releaseAssetId) {
-    result = await handleReleaseAsset(apiEndpoint, apiKey, releaseAssetId, { token, timeout, pollingInterval });
-  } else {
-    core.setFailed("Unexpected error: no scan target provided");
+  try {
+    if (localFilePath) {
+      result = await handleLocalFilePath(apiEndpoint, apiKey, localFilePath);
+    } else if (artifactId) {
+      result = await handleArtifact(apiEndpoint, apiKey, artifactId, { token, timeout, pollingInterval });
+    } else if (releaseAssetId) {
+      result = await handleReleaseAsset(apiEndpoint, apiKey, releaseAssetId, { token, timeout, pollingInterval });
+    } else {
+      core.setFailed("Unexpected error: no scan target provided");
+      return;
+    }
+  } catch (error) {
+    core.setFailed((error as Error).message);
     return;
   }
 

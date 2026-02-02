@@ -2,6 +2,49 @@ import * as core from "@actions/core";
 import * as github from "@actions/github";
 import type { GitHubReleaseAsset, GitHubArtifact } from "./types";
 
+/**
+ * Get the actual download URL by calling the GitHub URL without following redirects.
+ * The Location header contains the actual download URL.
+ * For artifacts: valid for 1 minute
+ * For release assets: valid for 1 hour
+ */
+export async function getActualDownloadUrl(
+  url: string,
+  token?: string
+): Promise<string> {
+  core.debug(`Getting actual download URL from: ${url}`);
+
+  try {
+    const response = await fetch(url, {
+      method: "GET",
+      headers: {
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        Accept: "application/octet-stream",
+      },
+      redirect: "manual", // Don't follow redirects
+    });
+
+    // For redirects (301, 302, 303, 307, 308), get Location header
+    if (response.status >= 300 && response.status < 400) {
+      const location = response.headers.get("Location");
+      if (!location) {
+        throw new Error(
+          `Expected Location header in redirect response, but got none`
+        );
+      }
+      core.debug(`Actual download URL retrieved (valid for limited time)`);
+      return location;
+    }
+
+    throw new Error(
+      `Expected redirect response, but got ${response.status} ${response.statusText}`
+    );
+  } catch (error) {
+    core.error(`Failed to get actual download URL: ${error}`);
+    throw error;
+  }
+}
+
 export async function getReleaseAsset(
   assetId: number,
   token?: string

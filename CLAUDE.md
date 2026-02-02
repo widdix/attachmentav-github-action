@@ -74,14 +74,20 @@ scanFileSync(apiEndpoint: string, apiKey: string, buffer: Buffer)
 
 ## API Integration
 
-### Sync API
+### Sync API (Binary Upload)
 - Used for local files ≤ 10MB
 - Endpoint: `/v1/scan/sync/binary`
 - Method: POST with binary body
 - Streams file content using Node.js Readable stream
 
+### Sync API (Download)
+- Used for artifacts/assets < 200MB
+- Endpoint: `/v1/scan/sync/download`
+- Method: POST with JSON body containing `download_url`
+- attachmentAV downloads the file from the provided URL
+
 ### Async API
-- Used for GitHub artifacts and release assets
+- Used for artifacts/assets ≥ 200MB
 - Submit endpoint: `/v1/scan/async/download`
 - Result endpoint: `/v1/scan/async/result?trace_id={id}`
 - Polling continues until result is ready (HTTP 200) or timeout
@@ -90,26 +96,45 @@ scanFileSync(apiEndpoint: string, apiKey: string, buffer: Buffer)
 ### Authentication
 - attachmentAV API: Uses `x-api-key` header
 - GitHub API: Uses bearer token via Octokit
-- Token forwarding: GitHub token sent to attachmentAV as `Authorization: Bearer {token}` in `download_headers`
 
 ## Scan Targets
 
 ### Local Files
-- Must be ≤ 10MB (sync API limitation)
+- Must be ≤ 10MB (sync binary API limitation)
 - Path resolved relative to repository root
 - Files > 10MB require upload as release asset or artifact first
 
 ### GitHub Artifacts
-- Always use async API
-- Requires artifact ID
-- Uses `archive_download_url` from GitHub API
-- Optional GitHub token for private artifacts
+**Important**: Requires token for authentication
+
+**Flow:**
+1. Get artifact metadata from GitHub API (includes `archive_download_url` and size)
+2. Call `archive_download_url` with token, **without following redirects** (`redirect: "manual"`)
+3. Extract `Location` header from redirect response (valid for **1 minute**)
+4. Route based on size:
+   - **< 200MB**: Use sync download API (`/v1/scan/sync/download`) with Location URL
+   - **≥ 200MB**: Use async API with Location URL
+
+**Why this approach:**
+- attachmentAV API cannot properly follow GitHub's redirects
+- The Location URL is temporary (1 minute for artifacts)
+- Sync download reduces risk of URL expiration for smaller files
 
 ### GitHub Release Assets
-- Always use async API
-- Requires release asset ID
-- Uses `url` (not `browser_download_url`) to allow attachmentAV to follow redirects
-- Optional GitHub token for private releases
+**Important**: Requires token for authentication
+
+**Flow:**
+1. Get release asset metadata from GitHub API (includes `url` and size)
+2. Call `url` with token, **without following redirects** (`redirect: "manual"`)
+3. Extract `Location` header from redirect response (valid for **1 hour**)
+4. Route based on size:
+   - **< 200MB**: Use sync download API (`/v1/scan/sync/download`) with Location URL
+   - **≥ 200MB**: Use async API with Location URL
+
+**Why this approach:**
+- attachmentAV API cannot properly follow GitHub's redirects
+- The Location URL is temporary (1 hour for release assets - longer than artifacts)
+- Sync download reduces risk of URL expiration for smaller files
 
 ## Inputs
 
@@ -166,12 +191,6 @@ core.error(`Failed to fetch artifact: ${error}`);
 ```
 
 ## Testing
-
-### Local Testing
-Use `test-local.ts` to test API integration:
-```bash
-ATTACHMENTAV_API_KEY=your-key npm run test:local
-```
 
 ### Workflow Testing
 The GitHub Actions workflow (`.github/workflows/main.yml`) tests:

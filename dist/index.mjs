@@ -28095,6 +28095,38 @@ async function scanFileSync(apiEndpoint, apiKey, buffer) {
         throw error$1;
     }
 }
+async function scanFileSyncDownload(apiEndpoint, apiKey, request) {
+    const syncDownloadUrl = `${apiEndpoint}/v1/scan/sync/download`;
+    debug(`Making sync download request to: ${syncDownloadUrl}`);
+    debug(`Download URL: ${request.download_url}`);
+    try {
+        const response = await fetch(syncDownloadUrl, {
+            method: "POST",
+            headers: {
+                "x-api-key": apiKey,
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify(request),
+        });
+        debug(`Response status: ${response.status} ${response.statusText}`);
+        if (!response.ok) {
+            const errorText = await response.text();
+            error(`API error response: ${errorText}`);
+            throw new Error(`attachmentAV sync download API error: ${response.status} ${response.statusText}. ${errorText}`);
+        }
+        const result = (await response.json());
+        debug(`Scan result: ${JSON.stringify(result)}`);
+        return result;
+    }
+    catch (error$1) {
+        error(`Fetch error details: ${error$1}`);
+        if (error$1 instanceof Error) {
+            error(`Error message: ${error$1.message}`);
+            error(`Error stack: ${error$1.stack}`);
+        }
+        throw error$1;
+    }
+}
 async function submitAsyncScan(apiEndpoint, apiKey, request) {
     const asyncUrl = `${apiEndpoint}/v1/scan/async/download`;
     debug(`Submitting async scan to: ${asyncUrl}`);
@@ -28161,9 +28193,9 @@ async function pollAsyncResult(apiEndpoint, apiKey, traceId, timeoutSeconds, pol
     throw new Error(`Timeout reached after ${timeoutSeconds} seconds while waiting for scan results`);
 }
 
-const MB = 1024 * 1024;
-const MAX_SYNC_SIZE = 10 * MB; // 10MB
-const MAX_ASYNC_SIZE = 5 * 1024 * 1024 * MB; // 5TB
+const MB$1 = 1024 * 1024;
+const MAX_SYNC_SIZE = 10 * MB$1; // 10MB
+const MAX_ASYNC_SIZE = 5 * 1024 * 1024 * MB$1; // 5TB
 async function readFileAndCheckSize(filePath) {
     // Resolve relative path from repository root
     const absolutePath = path.resolve(process.cwd(), filePath);
@@ -32921,6 +32953,39 @@ function getOctokit(token, options, ...additionalPlugins) {
     return new GitHubWithPlugins(getOctokitOptions(token));
 }
 
+/**
+ * Get the actual download URL by calling the GitHub URL without following redirects.
+ * The Location header contains the actual download URL.
+ * For artifacts: valid for 1 minute
+ * For release assets: valid for 1 hour
+ */
+async function getActualDownloadUrl(url, token) {
+    debug(`Getting actual download URL from: ${url}`);
+    try {
+        const response = await fetch(url, {
+            method: "GET",
+            headers: {
+                ...(token ? { Authorization: `Bearer ${token}` } : {}),
+                Accept: "application/octet-stream",
+            },
+            redirect: "manual", // Don't follow redirects
+        });
+        // For redirects (301, 302, 303, 307, 308), get Location header
+        if (response.status >= 300 && response.status < 400) {
+            const location = response.headers.get("Location");
+            if (!location) {
+                throw new Error(`Expected Location header in redirect response, but got none`);
+            }
+            debug(`Actual download URL retrieved (valid for limited time)`);
+            return location;
+        }
+        throw new Error(`Expected redirect response, but got ${response.status} ${response.statusText}`);
+    }
+    catch (error$1) {
+        error(`Failed to get actual download URL: ${error$1}`);
+        throw error$1;
+    }
+}
 async function getReleaseAsset(assetId, token) {
     const { owner, repo } = context.repo;
     debug(`Fetching release asset ${assetId} from ${owner}/${repo}`);
@@ -32970,6 +33035,8 @@ async function getArtifact(artifactId, token) {
 }
 
 const ONE_HOUR_SECONDS = 60 * 60;
+const MB = 1024 * 1024;
+const SYNC_DOWNLOAD_THRESHOLD = 200 * MB;
 function getInputs() {
     const localFilePath = getInput("local-file-path");
     const artifactId = getInput("artifact-id");
@@ -33012,7 +33079,6 @@ async function handleLocalFilePath(apiEndpoint, apiKey, localFilePath) {
     debug(`Working directory: ${process.cwd()}`);
     const { buffer, size } = await readFileAndCheckSize(localFilePath);
     info(`File size: ${size} bytes`);
-    const MB = 1024 * 1024;
     const MAX_SYNC_SIZE = 10 * MB;
     if (size <= MAX_SYNC_SIZE) {
         // Use sync API
@@ -33042,18 +33108,45 @@ async function submitAndPollAsyncScan(apiEndpoint, apiKey, downloadUrl, options)
 async function handleArtifact(apiEndpoint, apiKey, artifactId, options) {
     const id = parseInt(artifactId, 10);
     info(`Scanning artifact ID: ${id}`);
+    if (!options.token) {
+        throw new Error("GitHub token is required for scanning artifacts");
+    }
     const artifact = await getArtifact(id, options.token);
     info(`Artifact: ${artifact.name}, size: ${artifact.size_in_bytes} bytes`);
-    const downloadUrl = artifact.archive_download_url;
-    return submitAndPollAsyncScan(apiEndpoint, apiKey, downloadUrl, options);
+    // Get the actual download URL (valid for 1 minute)
+    const actualDownloadUrl = await getActualDownloadUrl(artifact.archive_download_url, options.token);
+    if (artifact.size_in_bytes < SYNC_DOWNLOAD_THRESHOLD) {
+        // Use sync download API for files < 200MB
+        info("Using sync download API (artifact < 200MB)");
+        return scanFileSyncDownload(apiEndpoint, apiKey, {
+            download_url: actualDownloadUrl,
+        });
+    }
+    else {
+        // Use async API for files >= 200MB
+        info("Using async API (artifact ≥ 200MB)");
+        return submitAndPollAsyncScan(apiEndpoint, apiKey, actualDownloadUrl, options);
+    }
 }
 async function handleReleaseAsset(apiEndpoint, apiKey, releaseAssetId, options) {
     const id = parseInt(releaseAssetId, 10);
     info(`Scanning release asset ID: ${id}`);
     const asset = await getReleaseAsset(id, options.token);
     info(`Release asset: ${asset.name}, size: ${asset.size} bytes`);
-    const downloadUrl = asset.url;
-    return submitAndPollAsyncScan(apiEndpoint, apiKey, downloadUrl, options);
+    // Get the actual download URL (valid for 1 hour)
+    const actualDownloadUrl = await getActualDownloadUrl(asset.url, options.token);
+    if (asset.size < SYNC_DOWNLOAD_THRESHOLD) {
+        // Use sync download API for files < 200MB
+        info("Using sync download API (asset < 200MB)");
+        return scanFileSyncDownload(apiEndpoint, apiKey, {
+            download_url: actualDownloadUrl,
+        });
+    }
+    else {
+        // Use async API for files >= 200MB
+        info("Using async API (asset ≥ 200MB)");
+        return submitAndPollAsyncScan(apiEndpoint, apiKey, actualDownloadUrl, options);
+    }
 }
 async function run() {
     info("Starting attachmentAV malware scan...");
@@ -33067,17 +33160,23 @@ async function run() {
     }
     const { localFilePath, artifactId, releaseAssetId, apiEndpoint, apiKey, token, timeout, pollingInterval, failOnInfected } = inputs;
     let result;
-    if (localFilePath) {
-        result = await handleLocalFilePath(apiEndpoint, apiKey, localFilePath);
+    try {
+        if (localFilePath) {
+            result = await handleLocalFilePath(apiEndpoint, apiKey, localFilePath);
+        }
+        else if (artifactId) {
+            result = await handleArtifact(apiEndpoint, apiKey, artifactId, { token, timeout, pollingInterval });
+        }
+        else if (releaseAssetId) {
+            result = await handleReleaseAsset(apiEndpoint, apiKey, releaseAssetId, { token, timeout, pollingInterval });
+        }
+        else {
+            setFailed("Unexpected error: no scan target provided");
+            return;
+        }
     }
-    else if (artifactId) {
-        result = await handleArtifact(apiEndpoint, apiKey, artifactId, { token, timeout, pollingInterval });
-    }
-    else if (releaseAssetId) {
-        result = await handleReleaseAsset(apiEndpoint, apiKey, releaseAssetId, { token, timeout, pollingInterval });
-    }
-    else {
-        setFailed("Unexpected error: no scan target provided");
+    catch (error) {
+        setFailed(error.message);
         return;
     }
     // Set outputs
