@@ -72,14 +72,14 @@ jobs:
         run: |
           # Create a test release with .gitignore as an asset
           TAG_NAME="test-v${{ github.run_number }}"
-          gh release create "$TAG_NAME" .gitignore \
+          gh release create "$TAG_NAME" action.yml \
             --title "Test Release ${{ github.run_number }}" \
             --notes "Automated test release for attachmentAV scanning" \
             --repo ${{ github.repository }}
 
           # Get the asset ID
           ASSET_ID=$(gh api repos/${{ github.repository }}/releases/tags/$TAG_NAME \
-            --jq '.assets[] | select(.name == ".gitignore") | .id')
+            --jq '.assets[] | select(.name == "action.yml") | .id')
           echo "asset_id=$ASSET_ID" >> $GITHUB_OUTPUT
           echo "tag_name=$TAG_NAME" >> $GITHUB_OUTPUT
           echo "Release created: $TAG_NAME"
@@ -107,7 +107,7 @@ jobs:
 
       # Cleanup: Delete test release
       - name: Cleanup test release
-        if: always()
+        if: steps.scan_asset.outcome == 'success'
         run: |
           if [ -n "${{ steps.create_release.outputs.tag_name }}" ]; then
             gh release delete "${{ steps.create_release.outputs.tag_name }}" --yes --cleanup-tag || true
