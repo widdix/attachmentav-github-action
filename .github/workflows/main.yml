@@ -111,13 +111,13 @@ jobs:
           token: ${{ github.token }}
           fail-on-infected: true
 
-      - name: Display local scan results
+      - name: Display large local file scan results
         run: |
-          echo "Scan status: ${{ steps.scan_local.outputs.status }}"
-          echo "File size: ${{ steps.scan_local.outputs.file-size }} bytes"
-          echo "Real file type: ${{ steps.scan_local.outputs.real-file-type }}"
-          if [ -n "${{ steps.scan_local.outputs.finding }}" ]; then
-            echo "Finding: ${{ steps.scan_local.outputs.finding }}"
+          echo "Scan status: ${{ steps.scan_local_80mb.outputs.status }}"
+          echo "File size: ${{ steps.scan_local.outputs_80mb.file-size }} bytes"
+          echo "Real file type: ${{ steps.scan_local_80mb.outputs.real-file-type }}"
+          if [ -n "${{ steps.scan_local_80mb.outputs.finding }}" ]; then
+            echo "Finding: ${{ steps.scan_local_80mb.outputs.finding }}"
           fi
 
       # Test 5: Create and scan >200MB artifact
@@ -135,7 +135,7 @@ jobs:
           path: test-data/
           retention-days: 1 # set retention to avoid a full storage
 
-      - name: Scan artifact
+      - name: Scan large artifact
         id: scan_artifact_large
         uses: ./
         with:
@@ -144,13 +144,13 @@ jobs:
           token: ${{ github.token }}
           fail-on-infected: true
 
-      - name: Display artifact scan results
+      - name: Display large artifact scan results
         run: |
-          echo "Scan status: ${{ steps.scan_artifact.outputs.status }}"
-          echo "File size: ${{ steps.scan_artifact.outputs.file-size }} bytes"
-          echo "Real file type: ${{ steps.scan_artifact.outputs.real-file-type }}"
-          if [ -n "${{ steps.scan_artifact.outputs.finding }}" ]; then
-            echo "Finding: ${{ steps.scan_artifact.outputs.finding }}"
+          echo "Scan status: ${{ steps.scan_artifact_large.outputs.status }}"
+          echo "File size: ${{ steps.scan_artifact_large.outputs.file-size }} bytes"
+          echo "Real file type: ${{ steps.scan_artifact_large.outputs.real-file-type }}"
+          if [ -n "${{ steps.scan_artifact_large.outputs.finding }}" ]; then
+            echo "Finding: ${{ steps.scan_artifact_large.outputs.finding }}"
           fi
 
       # Cleanup: Delete test release
