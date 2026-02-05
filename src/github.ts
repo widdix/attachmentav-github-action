@@ -55,10 +55,13 @@ export async function getReleaseAsset(
   const octokit = github.getOctokit(token || process.env.GITHUB_TOKEN || "");
 
   try {
-    const { data } = await octokit.rest.repos.getReleaseAsset({
+    const { data } = await octokit.request('GET /repos/{owner}/{repo}/releases/assets/{asset_id}', {
       owner,
       repo,
       asset_id: assetId,
+      headers: {
+        'X-GitHub-Api-Version': '2022-11-28'
+      },
     });
 
     core.debug(`Release asset: ${data.name}, size: ${data.size} bytes`);
@@ -86,10 +89,13 @@ export async function getArtifact(
   const octokit = github.getOctokit(token || process.env.GITHUB_TOKEN || "");
 
   try {
-    const { data } = await octokit.rest.actions.getArtifact({
+    const { data } = await octokit.request('GET /repos/{owner}/{repo}/actions/artifacts/{artifact_id}', {
       owner,
       repo,
       artifact_id: artifactId,
+      headers: {
+        'X-GitHub-Api-Version': '2022-11-28'
+      },
     });
 
     core.debug(
