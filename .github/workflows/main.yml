@@ -37,11 +37,11 @@ jobs:
           fi
 
       # Test 2: Create and scan artifact
-      - name: Upload .gitignore as artifact
+      - name: Upload action.yml as artifact
         id: upload_artifact
         uses: actions/upload-artifact@v6
         with:
-          name: test-gitignore
+          name: test-action-yml
           path: action.yml
 
       - name: Scan artifact
@@ -63,10 +63,10 @@ jobs:
           fi
 
       # Test 3: Create release and scan asset
-      - name: Create release with .gitignore asset
+      - name: Create release with action.yml asset
         id: create_release
         run: |
-          # Create a test release with .gitignore as an asset
+          # Create a test release with action.yml as an asset
           TAG_NAME="test-v${{ github.run_number }}"
           gh release create "$TAG_NAME" action.yml \
             --title "Test Release ${{ github.run_number }}" \
@@ -99,6 +99,56 @@ jobs:
           echo "Real file type: ${{ steps.scan_asset.outputs.real-file-type }}"
           if [ -n "${{ steps.scan_asset.outputs.finding }}" ]; then
             echo "Finding: ${{ steps.scan_asset.outputs.finding }}"
+          fi
+
+      # Test 4: Scan local file >10MB
+      - name: Scan local random-80mb-file
+        id: scan_local_80mb
+        uses: ./ # Uses the action in the root directory
+        with:
+          local-file-path: test-data/random-80mb-file
+          api-key: ${{ secrets.ATTACHMENTAV_API_KEY }}
+          fail-on-infected: true
+
+      - name: Display local scan results
+        run: |
+          echo "Scan status: ${{ steps.scan_local.outputs.status }}"
+          echo "File size: ${{ steps.scan_local.outputs.file-size }} bytes"
+          echo "Real file type: ${{ steps.scan_local.outputs.real-file-type }}"
+          if [ -n "${{ steps.scan_local.outputs.finding }}" ]; then
+            echo "Finding: ${{ steps.scan_local.outputs.finding }}"
+          fi
+
+      # Test 5: Create and scan >200MB artifact
+      - name: Duplicate test-data
+        run: |
+          cp test-data/random-80mb-file test-data/random-80mb-file2
+          cp test-data/random-80mb-file test-data/random-80mb-file3
+          cp test-data/random-80mb-file test-data/random-80mb-file4
+
+      - name: Upload test-data/ folder as artifact
+        id: upload_artifact
+        uses: actions/upload-artifact@v6
+        with:
+          name: test-data-folder
+          path: test-data/
+
+      - name: Scan artifact
+        id: scan_artifact
+        uses: ./
+        with:
+          artifact-id: ${{ steps.upload_artifact.outputs.artifact-id }}
+          api-key: ${{ secrets.ATTACHMENTAV_API_KEY }}
+          token: ${{ github.token }}
+          fail-on-infected: true
+
+      - name: Display artifact scan results
+        run: |
+          echo "Scan status: ${{ steps.scan_artifact.outputs.status }}"
+          echo "File size: ${{ steps.scan_artifact.outputs.file-size }} bytes"
+          echo "Real file type: ${{ steps.scan_artifact.outputs.real-file-type }}"
+          if [ -n "${{ steps.scan_artifact.outputs.finding }}" ]; then
+            echo "Finding: ${{ steps.scan_artifact.outputs.finding }}"
           fi
 
       # Cleanup: Delete test release
