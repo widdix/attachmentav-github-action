@@ -28194,7 +28194,7 @@ async function pollAsyncResult(apiEndpoint, apiKey, traceId, timeoutSeconds, pol
 }
 
 const MB$1 = 1024 * 1024;
-const MAX_SYNC_SIZE = 10 * MB$1; // 10MB
+const MAX_SYNC_SIZE = 100 * MB$1; // 100MB
 const MAX_ASYNC_SIZE = 5 * 1024 * 1024 * MB$1; // 5TB
 async function readFileAndCheckSize(filePath) {
     // Resolve relative path from repository root
