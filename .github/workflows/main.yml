@@ -46,22 +46,11 @@ jobs:
           name: test-gitignore
           path: action.yml
 
-      - name: Get artifact ID
-        id: get_artifact
-        run: |
-          # Use GitHub API to get the artifact ID
-          ARTIFACT_ID=$(gh api repos/${{ github.repository }}/actions/artifacts \
-            --jq '.artifacts[] | select(.name == "test-gitignore") | .id' | head -n 1)
-          echo "artifact_id=$ARTIFACT_ID" >> $GITHUB_OUTPUT
-          echo "Artifact ID: $ARTIFACT_ID"
-        env:
-          GH_TOKEN: ${{ github.token }}
-
       - name: Scan artifact
         id: scan_artifact
         uses: ./
         with:
-          artifact-id: ${{ steps.get_artifact.outputs.artifact_id }}
+          artifact-id: ${{ steps.upload_artifact.outputs.artifact_id }}
           api-key: ${{ secrets.ATTACHMENTAV_API_KEY }}
           token: ${{ github.token }}
           fail-on-infected: true
