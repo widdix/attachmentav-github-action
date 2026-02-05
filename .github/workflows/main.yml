@@ -5,6 +5,10 @@ on:
     branches:
       - main
 
+permissions:
+  actions: write
+  contents: write
+
 jobs:
   test_scans:
     name: Test local file, artifact, and release asset scanning
