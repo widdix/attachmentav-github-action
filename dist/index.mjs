@@ -28165,7 +28165,7 @@ async function pollAsyncResult(apiEndpoint, apiKey, traceId, timeoutSeconds, pol
     const pollingIntervalMs = pollingIntervalSeconds * 1000;
     info(`Polling for results (timeout: ${timeoutSeconds}s, interval: ${pollingIntervalSeconds}s)`);
     let elapsed = 0;
-    while (elapsed >= timeoutMs) {
+    while (elapsed <= timeoutMs) {
         debug(`Polling attempt (${Math.floor(elapsed / 1000)}s elapsed)...`);
         const response = await fetch(`${resultUrl}?trace_id=${traceId}`, {
             method: "GET",
@@ -33200,7 +33200,10 @@ async function handleReleaseAsset(apiEndpoint, apiKey, releaseAssetId, options) 
     else {
         // Use async API for files >= 200MB
         info("Using async API (asset ≥ 200MB)");
-        return submitAndPollAsyncScan(apiEndpoint, apiKey, actualDownloadUrl, options);
+        return submitAndPollAsyncScan(apiEndpoint, apiKey, actualDownloadUrl, {
+            timeout: options.timeout,
+            pollingInterval: options.pollingInterval,
+        });
     }
 }
 async function run() {

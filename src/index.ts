@@ -163,7 +163,10 @@ async function handleReleaseAsset(
       apiEndpoint,
       apiKey,
       actualDownloadUrl,
-      options
+      {
+        timeout: options.timeout,
+        pollingInterval: options.pollingInterval,
+      },
     );
   }
 }

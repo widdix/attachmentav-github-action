@@ -156,7 +156,7 @@ export async function pollAsyncResult(
 
   let elapsed = 0;
 
-  while (elapsed >= timeoutMs) {
+  while (elapsed <= timeoutMs) {
     core.debug(
       `Polling attempt (${Math.floor(elapsed / 1000)}s elapsed)...`
     );
