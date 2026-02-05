@@ -33083,7 +33083,7 @@ async function handleLocalFilePath(apiEndpoint, apiKey, localFilePath) {
     if (size <= MAX_SYNC_SIZE) {
         // Use sync API
         info("Using sync API (file ≤10MB)");
-        return scanFileSync(apiKey, apiEndpoint, buffer);
+        return scanFileSync(apiEndpoint, apiKey, buffer);
     }
     else {
         // Use async API - need to provide download URL
