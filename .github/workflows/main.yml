@@ -127,14 +127,15 @@ jobs:
           cp test-data/random-80mb-file test-data/random-80mb-file4
 
       - name: Upload test-data/ folder as artifact
-        id: upload_artifact
+        id: upload_artifact_large
         uses: actions/upload-artifact@v6
         with:
           name: test-data-folder
           path: test-data/
+          retention-days: 1 # set retention to avoid a full storage
 
       - name: Scan artifact
-        id: scan_artifact
+        id: scan_artifact_large
         uses: ./
         with:
           artifact-id: ${{ steps.upload_artifact.outputs.artifact-id }}
@@ -153,10 +154,22 @@ jobs:
 
       # Cleanup: Delete test release
       - name: Cleanup test release
-        if: steps.scan_asset.outcome == 'success'
+        if: steps.create_release.outcome == 'success'
         run: |
           if [ -n "${{ steps.create_release.outputs.tag_name }}" ]; then
             gh release delete "${{ steps.create_release.outputs.tag_name }}" --yes --cleanup-tag || true
           fi
         env:
           GH_TOKEN: ${{ github.token }}
+
+      - name: Cleanup large artifact file
+        if: steps.upload_artifact_large.outcome == 'success'
+        run: |
+          if [ -n "${{ steps.upload_artifact_large.outputs.artifact-id }}" ]; then
+            curl -L \
+              -X DELETE \
+              -H "Accept: application/vnd.github+json" \
+              -H "Authorization: Bearer ${{ github.token }}" \
+              -H "X-GitHub-Api-Version: 2022-11-28" \
+              https://api.github.com/repos/${{ github.repository }}/actions/artifacts/${{ steps.upload_artifact_large.outputs.artifact-id }}
+          fi
