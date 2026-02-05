@@ -13,10 +13,6 @@ jobs:
   test_scans:
     name: Test local file, artifact, and release asset scanning
     runs-on: ubuntu-latest
-
-    env:
-      ACTIONS_STEP_DEBUG: true
-
     steps:
       # Checkout the repository to access files
       - name: Checkout
