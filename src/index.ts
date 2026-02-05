@@ -84,7 +84,7 @@ async function handleLocalFilePath(apiEndpoint: string, apiKey: string, localFil
   if (size <= MAX_SYNC_SIZE) {
     // Use sync API
     core.info("Using sync API (file ≤10MB)");
-    return scanFileSync(apiKey, apiEndpoint, buffer);
+    return scanFileSync(apiEndpoint, apiKey, buffer);
   } else {
     // Use async API - need to provide download URL
     throw new Error(
