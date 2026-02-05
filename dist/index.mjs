@@ -32966,10 +32966,13 @@ async function getActualDownloadUrl(url, token) {
             method: "GET",
             headers: {
                 ...(token ? { Authorization: `Bearer ${token}` } : {}),
-                Accept: "application/octet-stream",
+                Accept: "application/vnd.github+json",
+                'X-GitHub-Api-Version': '2022-11-28'
             },
             redirect: "manual", // Don't follow redirects
         });
+        debug(`response headers: ${Array.from(response.headers.entries()).join('\n')}`);
+        debug(`response payload: ${await response.text()}`);
         // For redirects (301, 302, 303, 307, 308), get Location header
         if (response.status >= 300 && response.status < 400) {
             const location = response.headers.get("Location");
@@ -32991,10 +32994,13 @@ async function getReleaseAsset(assetId, token) {
     debug(`Fetching release asset ${assetId} from ${owner}/${repo}`);
     const octokit = getOctokit(token || process.env.GITHUB_TOKEN || "");
     try {
-        const { data } = await octokit.rest.repos.getReleaseAsset({
+        const { data } = await octokit.request('GET /repos/{owner}/{repo}/releases/assets/{asset_id}', {
             owner,
             repo,
             asset_id: assetId,
+            headers: {
+                'X-GitHub-Api-Version': '2022-11-28'
+            },
         });
         debug(`Release asset: ${data.name}, size: ${data.size} bytes`);
         return {
@@ -33015,10 +33021,13 @@ async function getArtifact(artifactId, token) {
     debug(`Fetching artifact ${artifactId} from ${owner}/${repo}`);
     const octokit = getOctokit(token || process.env.GITHUB_TOKEN || "");
     try {
-        const { data } = await octokit.rest.actions.getArtifact({
+        const { data } = await octokit.request('GET /repos/{owner}/{repo}/actions/artifacts/{artifact_id}', {
             owner,
             repo,
             artifact_id: artifactId,
+            headers: {
+                'X-GitHub-Api-Version': '2022-11-28'
+            },
         });
         debug(`Artifact: ${data.name}, size: ${data.size_in_bytes} bytes`);
         return {
