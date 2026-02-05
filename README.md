@@ -5,7 +5,7 @@ Supports scanning local repository files, GitHub Actions artifacts, and GitHub r
 
 ## Features
 
-- **Local File Scanning**: Scan files directly from your repository (up to 10MB)
+- **Local File Scanning**: Scan files directly from your repository (up to 100MB)
 - **Artifact Scanning**: Scan GitHub Actions artifacts with automatic size-based API selection
 - **Release Asset Scanning**: Scan files attached to GitHub releases
 - **Flexible Configuration**: Configurable timeout, polling intervals, and failure behavior
@@ -22,7 +22,7 @@ Supports scanning local repository files, GitHub Actions artifacts, and GitHub r
 
 ### Scan Local Repository Files
 
-Scan files directly from your repository. Supports files up to 10MB.
+Scan files directly from your repository. Supports files up to 100MB.
 
 ```yaml
 - name: Scan local file
@@ -32,6 +32,17 @@ Scan files directly from your repository. Supports files up to 10MB.
     api-key: ${{ secrets.ATTACHMENTAV_API_KEY }}
 ```
 
+For files larger than 10MB, a GitHub token is required:
+
+```yaml
+- name: Scan large local file
+  uses: attachmentAV/scan@v1
+  with:
+    local-file-path: path/to/large-file.zip
+    api-key: ${{ secrets.ATTACHMENTAV_API_KEY }}
+    token: ${{ github.token }}
+```
+
 **Required Permissions:**
 
 ```yaml
@@ -39,8 +50,10 @@ permissions:
   contents: read
 ```
 
-**Limitations:** Local files larger than 10MB cannot be scanned directly. Upload them as release assets or artifacts
-first.
+**Limitations:**
+- Files ≤10MB: Uploaded directly (no token required)
+- Files >10MB and ≤100MB: Downloaded via GitHub Contents API (token required)
+- Files >100MB: Not supported for local scanning; upload as release asset or artifact first
 
 ### Scan GitHub Actions Artifacts
 
@@ -113,7 +126,7 @@ reliable access.
 | `fail-on-infected` | Fail the action if malware is detected               | No       | `true`                                  |
 
 \* **One of** `local-file-path`, `artifact-id`, or `release-asset-id` must be provided (mutually exclusive)
-\*\* Required for artifacts; recommended for release assets
+\*\* Required for: artifacts, local files >10MB and release assets of private repositories
 
 ## Outputs
 
@@ -225,12 +238,14 @@ Allow workflow to continue even if malware is detected:
 
 ## How It Works
 
-1. **Local Files (≤10MB)**: Uploaded directly to attachmentAV sync API
-2. **Artifacts & Assets (<200MB)**: Download URL sent to attachmentAV sync API
-3. **Artifacts & Assets (≥200MB)**: Download URL sent to attachmentAV async API with automatic polling
+1. **Local Files (≤10MB)**: Uploaded directly to attachmentAV sync binary API
+2. **Local Files (>10MB and ≤100MB)**: GitHub Contents API URL sent to attachmentAV sync download API
+3. **Artifacts & Assets (<200MB)**: Download URL sent to attachmentAV sync download API
+4. **Artifacts & Assets (≥200MB)**: Download URL sent to attachmentAV async API with automatic polling
 
 The action handles GitHub's temporary download URLs automatically:
 
+- Contents API URLs require authentication headers
 - Artifact download URLs are valid for 1 minute
 - Release asset download URLs are valid for 1 hour
 
@@ -244,9 +259,17 @@ Artifacts always require authentication. Provide the token input:
 token: ${{ github.token }}
 ```
 
-### "Local files >10MB require async API..."
+### "GitHub token is required for scanning local files >10MB"
 
-Local files larger than 10MB cannot be scanned directly. Upload them as a release asset or artifact first.
+Local files between 10MB and 100MB require a GitHub token for authentication. Provide the token input:
+
+```yaml
+token: ${{ github.token }}
+```
+
+### "Local files >100MB are not supported"
+
+Local files larger than 100MB cannot be scanned directly. Upload them as a release asset or artifact first.
 
 ### Permission Errors
 

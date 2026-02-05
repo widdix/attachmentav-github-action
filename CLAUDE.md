@@ -28,7 +28,7 @@ throw new Error("Local files cannot be directly accessed by attachmentAV");
 
 ❌ **Incorrect:**
 ```typescript
-core.info("Starting AttachmentAV malware scan...");
+core.info("Starting attachmentAV malware scan...");
 core.error("Attachmentav API error: 401 Unauthorized");
 ```
 
@@ -43,7 +43,7 @@ const attachmentAVConfig = { ... };
 
 ### File Structure
 - `src/index.ts` - Main entry point, orchestration logic
-- `src/api.ts` - AttachmentAV API interactions (sync and async)
+- `src/api.ts` - attachmentAV API interactions (sync and async)
 - `src/github.ts` - GitHub API interactions (artifacts and releases)
 - `src/fileUtils.ts` - File system operations
 - `src/types.ts` - TypeScript type definitions
@@ -81,10 +81,10 @@ scanFileSync(apiEndpoint: string, apiKey: string, buffer: Buffer)
 - Streams file content using Node.js Readable stream
 
 ### Sync API (Download)
-- Used for artifacts/assets < 200MB
+- Used for local files >10MB and ≤100MB, artifacts/assets < 200MB
 - Endpoint: `/v1/scan/sync/download`
-- Method: POST with JSON body containing `download_url`
-- attachmentAV downloads the file from the provided URL
+- Method: POST with JSON body containing `download_url` and optional `download_headers`
+- attachmentAV downloads the file from the provided URL with the specified headers
 
 ### Async API
 - Used for artifacts/assets ≥ 200MB
@@ -100,9 +100,26 @@ scanFileSync(apiEndpoint: string, apiKey: string, buffer: Buffer)
 ## Scan Targets
 
 ### Local Files
-- Must be ≤ 10MB (sync binary API limitation)
+**Size-based routing:**
+- **≤ 10MB**: Use sync binary API (`/v1/scan/sync/binary`) - no token required
+- **>10MB and ≤100MB**: Use sync download API (`/v1/scan/sync/download`) with GitHub Contents API - token required
+- **>100MB**: Not supported - user must upload as release asset or artifact first
+
+**Flow for files >10MB and ≤100MB:**
+1. Read file and check size
+2. Construct GitHub Contents API URL: `https://api.github.com/repos/{owner}/{repo}/contents/{path}`
+3. Call sync download API with:
+   - `download_url`: Contents API URL
+   - `download_headers`:
+     - `Accept: application/vnd.github.raw+json`
+     - `Authorization: Bearer {token}`
+     - `X-GitHub-Api-Version: 2022-11-28`
+
+**Why this approach:**
+- GitHub Contents API provides direct access to repository files
+- Requires authentication headers for private repos
+- Avoids needing to upload files to temporary storage
 - Path resolved relative to repository root
-- Files > 10MB require upload as release asset or artifact first
 
 ### GitHub Artifacts
 **Important**: Requires token for authentication

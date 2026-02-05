@@ -3,6 +3,17 @@ import * as github from "@actions/github";
 import type { GitHubReleaseAsset, GitHubArtifact } from "./types";
 
 /**
+ * Constructs a GitHub Contents API URL for a local file.
+ * This URL can be used to download files from the repository.
+ */
+export function getContentsApiUrl(localFilePath: string): string {
+  const { owner, repo } = github.context.repo;
+  // Remove leading slash if present
+  const cleanPath = localFilePath.startsWith('/') ? localFilePath.slice(1) : localFilePath;
+  return `https://api.github.com/repos/${owner}/${repo}/contents/${cleanPath}`;
+}
+
+/**
  * Get the actual download URL by calling the GitHub URL without following redirects.
  * The Location header contains the actual download URL.
  * For artifacts: valid for 1 minute

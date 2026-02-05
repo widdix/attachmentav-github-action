@@ -13,6 +13,7 @@ export interface AttachmentAVAsyncRequest {
 
 export interface AttachmentAVSyncDownloadRequest {
   download_url: string;
+  download_headers?: Record<string, string>;
 }
 
 export interface GitHubReleaseAsset {

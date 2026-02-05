@@ -32954,6 +32954,16 @@ function getOctokit(token, options, ...additionalPlugins) {
 }
 
 /**
+ * Constructs a GitHub Contents API URL for a local file.
+ * This URL can be used to download files from the repository.
+ */
+function getContentsApiUrl(localFilePath) {
+    const { owner, repo } = context.repo;
+    // Remove leading slash if present
+    const cleanPath = localFilePath.startsWith('/') ? localFilePath.slice(1) : localFilePath;
+    return `https://api.github.com/repos/${owner}/${repo}/contents/${cleanPath}`;
+}
+/**
  * Get the actual download URL by calling the GitHub URL without following redirects.
  * The Location header contains the actual download URL.
  * For artifacts: valid for 1 minute
@@ -33083,20 +33093,38 @@ function getInputs() {
 
 const MB = 1024 * 1024;
 const SYNC_DOWNLOAD_THRESHOLD = 200 * MB;
-async function handleLocalFilePath(apiEndpoint, apiKey, localFilePath) {
+async function handleLocalFilePath(apiEndpoint, apiKey, localFilePath, options) {
     info(`Scanning local file: ${localFilePath}`);
-    debug(`Working directory: ${process.cwd()}`);
+    const { token } = options;
     const { buffer, size } = await readFileAndCheckSize(localFilePath);
     info(`File size: ${size} bytes`);
-    const MAX_SYNC_SIZE = 10 * MB;
-    if (size <= MAX_SYNC_SIZE) {
-        // Use sync API
-        info("Using sync API (file ≤10MB)");
+    const MAX_SYNC_BINARY_SIZE = 10 * MB;
+    const MAX_SYNC_DOWNLOAD_SIZE = 100 * MB;
+    if (size <= MAX_SYNC_BINARY_SIZE) {
+        // Use sync binary API for files ≤10MB
+        info("Using sync binary API (file ≤10MB)");
         return scanFileSync(apiEndpoint, apiKey, buffer);
     }
+    else if (size <= MAX_SYNC_DOWNLOAD_SIZE) {
+        // Use sync download API for files >10MB and ≤100MB
+        if (!token) {
+            throw new Error("GitHub token is required for scanning local files >10MB. Please provide the 'token' input.");
+        }
+        info("Using sync download API (file >10MB and ≤100MB)");
+        const contentsUrl = getContentsApiUrl(localFilePath);
+        debug(`Contents API URL: ${contentsUrl}`);
+        return scanFileSyncDownload(apiEndpoint, apiKey, {
+            download_url: contentsUrl,
+            download_headers: {
+                'Accept': 'application/vnd.github.raw+json',
+                'Authorization': `Bearer ${token}`,
+                'X-GitHub-Api-Version': '2022-11-28'
+            }
+        });
+    }
     else {
-        // Use async API - need to provide download URL
-        throw new Error("Local files >10MB require async API, but local files cannot be directly accessed by attachmentAV. Please upload the file as a release asset or artifact first.");
+        // Files >100MB not supported
+        throw new Error("Local files >100MB are not supported. Please upload the file as a release asset or artifact first.");
     }
 }
 async function submitAndPollAsyncScan(apiEndpoint, apiKey, downloadUrl, options) {
@@ -33171,7 +33199,7 @@ async function run() {
     let result;
     try {
         if (localFilePath) {
-            result = await handleLocalFilePath(apiEndpoint, apiKey, localFilePath);
+            result = await handleLocalFilePath(apiEndpoint, apiKey, localFilePath, { token });
         }
         else if (artifactId) {
             result = await handleArtifact(apiEndpoint, apiKey, artifactId, { token, timeout, pollingInterval });
