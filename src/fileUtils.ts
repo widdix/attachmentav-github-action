@@ -2,7 +2,7 @@ import * as fs from "fs/promises";
 import * as path from "path";
 
 const MB = 1024 * 1024;
-const MAX_SYNC_SIZE = 10 * MB; // 10MB
+const MAX_SYNC_SIZE = 100 * MB; // 100MB
 const MAX_ASYNC_SIZE = 5 * 1024 * 1024 * MB; // 5TB
 
 export async function readFileAndCheckSize(
