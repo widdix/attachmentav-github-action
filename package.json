@@ -10,7 +10,7 @@
     "type": "git",
     "url": "git+https://github.com/sh-cloud-software/attachmentav-github-action-malware-antivirus-scan.git"
   },
-  "license": "ISC",
+  "license": "MIT",
   "author": "Sebastian Hesse <sebastian@sh-cloud.software>",
   "type": "commonjs",
   "main": "src/index.ts",
