@@ -108,6 +108,7 @@ jobs:
         with:
           local-file-path: test-data/random-80mb-file
           api-key: ${{ secrets.ATTACHMENTAV_API_KEY }}
+          token: ${{ github.token }}
           fail-on-infected: true
 
       - name: Display local scan results
