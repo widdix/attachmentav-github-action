@@ -33043,8 +33043,6 @@ async function getArtifact(artifactId, token) {
 }
 
 const ONE_HOUR_SECONDS = 60 * 60;
-const MB = 1024 * 1024;
-const SYNC_DOWNLOAD_THRESHOLD = 200 * MB;
 function getInputs() {
     const localFilePath = getInput("local-file-path");
     const artifactId = getInput("artifact-id");
@@ -33082,6 +33080,9 @@ function getInputs() {
         failOnInfected
     };
 }
+
+const MB = 1024 * 1024;
+const SYNC_DOWNLOAD_THRESHOLD = 200 * MB;
 async function handleLocalFilePath(apiEndpoint, apiKey, localFilePath) {
     info(`Scanning local file: ${localFilePath}`);
     debug(`Working directory: ${process.cwd()}`);
