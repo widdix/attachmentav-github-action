@@ -1,7 +1,7 @@
 import * as core from "@actions/core";
 import { pollAsyncResult, scanFileSync, scanFileSyncDownload, submitAsyncScan, } from "./api";
 import { readFileAndCheckSize } from "./fileUtils";
-import { getActualDownloadUrl, getArtifact, getContentsApiUrl, getReleaseAsset, } from "./github";
+import { getActualDownloadUrl, getArtifact, getContentsDownloadUrl, getReleaseAsset, } from "./github";
 import { getInputs } from "./inputs";
 import { AttachmentAVResponse } from "./types";
 import { generateTraceId } from "./utils";
@@ -36,16 +36,11 @@ async function handleLocalFilePath(apiEndpoint: string, apiKey: string, localFil
     }
 
     core.info("Using sync download API (file >10MB and ≤100MB)");
-    const contentsUrl = getContentsApiUrl(localFilePath);
+    const contentsUrl = await getContentsDownloadUrl(localFilePath, token);
     core.debug(`Contents API URL: ${contentsUrl}`);
 
     return scanFileSyncDownload(apiEndpoint, apiKey, {
       download_url: contentsUrl,
-      download_headers: {
-        'Accept': 'application/vnd.github.raw+json',
-        'Authorization': `Bearer ${token}`,
-        'X-GitHub-Api-Version': '2022-11-28'
-      }
     });
   } else {
     // Files >100MB not supported
@@ -213,7 +208,10 @@ async function run(): Promise<void> {
 
   // Set outputs
   core.setOutput("status", result.status);
-  core.setOutput("file-size", result.size.toString());
+
+  if (result.size) {
+    core.setOutput("file-size", result.size.toString());
+  }
 
   if (result.finding) {
     core.setOutput("finding", result.finding);

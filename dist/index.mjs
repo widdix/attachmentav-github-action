@@ -32954,14 +32954,34 @@ function getOctokit(token, options, ...additionalPlugins) {
 }
 
 /**
- * Constructs a GitHub Contents API URL for a local file.
+ * Get the download url of a local file using GitHub Contents API.
  * This URL can be used to download files from the repository.
  */
-function getContentsApiUrl(localFilePath) {
+async function getContentsDownloadUrl(localFilePath, token) {
     const { owner, repo } = context.repo;
     // Remove leading slash if present
     const cleanPath = localFilePath.startsWith('/') ? localFilePath.slice(1) : localFilePath;
-    return `https://api.github.com/repos/${owner}/${repo}/contents/${cleanPath}`;
+    const url = `https://api.github.com/repos/${owner}/${repo}/contents/${cleanPath}`;
+    try {
+        const response = await fetch(url, {
+            method: "GET",
+            headers: {
+                Authorization: `Bearer ${token}`,
+                Accept: 'application/vnd.github.object+json',
+                'X-GitHub-Api-Version': '2022-11-28'
+            },
+        });
+        if (!response.ok) {
+            error(`Expected download url for local file ${localFilePath} but got ${response.status} ${response.statusText}`);
+            throw new Error('Fetching download url failed');
+        }
+        const { download_url } = await response.json();
+        return download_url;
+    }
+    catch (error$1) {
+        error(`Failed to get download url: ${error$1}`);
+        throw error$1;
+    }
 }
 /**
  * Get the actual download URL by calling the GitHub URL without following redirects.
@@ -33111,15 +33131,10 @@ async function handleLocalFilePath(apiEndpoint, apiKey, localFilePath, options) 
             throw new Error("GitHub token is required for scanning local files >10MB. Please provide the 'token' input.");
         }
         info("Using sync download API (file >10MB and ≤100MB)");
-        const contentsUrl = getContentsApiUrl(localFilePath);
+        const contentsUrl = await getContentsDownloadUrl(localFilePath, token);
         debug(`Contents API URL: ${contentsUrl}`);
         return scanFileSyncDownload(apiEndpoint, apiKey, {
             download_url: contentsUrl,
-            download_headers: {
-                'Accept': 'application/vnd.github.raw+json',
-                'Authorization': `Bearer ${token}`,
-                'X-GitHub-Api-Version': '2022-11-28'
-            }
         });
     }
     else {
@@ -33218,7 +33233,9 @@ async function run() {
     }
     // Set outputs
     setOutput("status", result.status);
-    setOutput("file-size", result.size.toString());
+    if (result.size) {
+        setOutput("file-size", result.size.toString());
+    }
     if (result.finding) {
         setOutput("finding", result.finding);
     }

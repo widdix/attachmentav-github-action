@@ -3,14 +3,37 @@ import * as github from "@actions/github";
 import type { GitHubReleaseAsset, GitHubArtifact } from "./types";
 
 /**
- * Constructs a GitHub Contents API URL for a local file.
+ * Get the download url of a local file using GitHub Contents API.
  * This URL can be used to download files from the repository.
  */
-export function getContentsApiUrl(localFilePath: string): string {
+export async function getContentsDownloadUrl(localFilePath: string, token: string): Promise<string> {
   const { owner, repo } = github.context.repo;
+
   // Remove leading slash if present
   const cleanPath = localFilePath.startsWith('/') ? localFilePath.slice(1) : localFilePath;
-  return `https://api.github.com/repos/${owner}/${repo}/contents/${cleanPath}`;
+  const url = `https://api.github.com/repos/${owner}/${repo}/contents/${cleanPath}`;
+
+  try {
+    const response = await fetch(url, {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: 'application/vnd.github.object+json',
+        'X-GitHub-Api-Version': '2022-11-28'
+      },
+    });
+
+    if (!response.ok) {
+      core.error(`Expected download url for local file ${localFilePath} but got ${response.status} ${response.statusText}`);
+      throw new Error('Fetching download url failed');
+    }
+
+    const { download_url } = await response.json();
+    return download_url;
+  } catch (error) {
+    core.error(`Failed to get download url: ${error}`);
+    throw error;
+  }
 }
 
 /**

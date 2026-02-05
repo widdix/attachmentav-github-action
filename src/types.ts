@@ -1,7 +1,7 @@
 export interface AttachmentAVResponse {
   status: "clean" | "infected" | "no";
   finding?: string;
-  size: number;
+  size?: number;
   realfiletype?: string;
 }
 

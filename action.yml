@@ -38,11 +38,11 @@ outputs:
   status:
     description: Scan result status (clean/infected/no)
   finding:
-    description: Malware type if infected
+    description: Malware type, not set if status is 'clean'
   file-size:
-    description: Size of scanned file in bytes
+    description: Size of scanned file in bytes, not set if scanning failed
   real-file-type:
-    description: Detected file type
+    description: Detected file type, not set if scanning failed
 
 runs:
   using: node24
