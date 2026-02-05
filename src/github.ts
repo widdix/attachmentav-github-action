@@ -25,6 +25,9 @@ export async function getActualDownloadUrl(
       redirect: "manual", // Don't follow redirects
     });
 
+    core.debug(`response headers: ${Array.from(response.headers.entries()).join('\n')}`);
+    core.debug(`response payload: ${await response.text()}`);
+
     // For redirects (301, 302, 303, 307, 308), get Location header
     if (response.status >= 300 && response.status < 400) {
       const location = response.headers.get("Location");
