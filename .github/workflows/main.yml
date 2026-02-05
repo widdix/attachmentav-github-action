@@ -39,7 +39,7 @@ jobs:
       # Test 2: Create and scan artifact
       - name: Upload .gitignore as artifact
         id: upload_artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: test-gitignore
           path: .gitignore
