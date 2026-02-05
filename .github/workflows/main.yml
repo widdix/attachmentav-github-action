@@ -35,8 +35,6 @@ jobs:
           if [ -n "${{ steps.scan_local.outputs.finding }}" ]; then
             echo "Finding: ${{ steps.scan_local.outputs.finding }}"
           fi
-          ls -al .
-          pwd
 
       # Test 2: Create and scan artifact
       - name: Upload .gitignore as artifact
