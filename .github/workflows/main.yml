@@ -48,7 +48,7 @@ jobs:
         id: scan_artifact
         uses: ./
         with:
-          artifact-id: ${{ steps.upload_artifact.outputs.artifact_id }}
+          artifact-id: ${{ steps.upload_artifact.outputs.artifact-id }}
           api-key: ${{ secrets.ATTACHMENTAV_API_KEY }}
           token: ${{ github.token }}
           fail-on-infected: true
