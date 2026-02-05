@@ -19,7 +19,7 @@ export async function getActualDownloadUrl(
       method: "GET",
       headers: {
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        Accept: "application/vnd.github+json",
+        Accept: url.includes('releases/assets') ? 'application/octet-stream' : "application/vnd.github+json",
         'X-GitHub-Api-Version': '2022-11-28'
       },
       redirect: "manual", // Don't follow redirects
