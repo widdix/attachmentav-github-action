@@ -9,24 +9,24 @@ import type { GitHubReleaseAsset, GitHubArtifact } from "./types";
  * For release assets: valid for 1 hour
  */
 export async function getActualDownloadUrl(
+  type: 'artifact' | 'release-asset',
   url: string,
   token?: string
 ): Promise<string> {
   core.debug(`Getting actual download URL from: ${url}`);
+
+  const acceptHeader = type === 'artifact' ? 'application/vnd.github+json' : 'application/octet-stream';
 
   try {
     const response = await fetch(url, {
       method: "GET",
       headers: {
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        Accept: url.includes('releases/assets') ? 'application/octet-stream' : "application/vnd.github+json",
+        Accept: acceptHeader,
         'X-GitHub-Api-Version': '2022-11-28'
       },
       redirect: "manual", // Don't follow redirects
     });
-
-    core.debug(`response headers: ${Array.from(response.headers.entries()).join('\n')}`);
-    core.debug(`response payload: ${await response.text()}`);
 
     // For redirects (301, 302, 303, 307, 308), get Location header
     if (response.status >= 300 && response.status < 400) {
@@ -56,7 +56,7 @@ export async function getReleaseAsset(
   const { owner, repo } = github.context.repo;
   core.debug(`Fetching release asset ${assetId} from ${owner}/${repo}`);
 
-  const octokit = github.getOctokit(token || process.env.GITHUB_TOKEN || "");
+  const octokit = github.getOctokit(token || '');
 
   try {
     const { data } = await octokit.request('GET /repos/{owner}/{repo}/releases/assets/{asset_id}', {
@@ -85,12 +85,12 @@ export async function getReleaseAsset(
 
 export async function getArtifact(
   artifactId: number,
-  token?: string
+  token: string
 ): Promise<GitHubArtifact> {
   const { owner, repo } = github.context.repo;
   core.debug(`Fetching artifact ${artifactId} from ${owner}/${repo}`);
 
-  const octokit = github.getOctokit(token || process.env.GITHUB_TOKEN || "");
+  const octokit = github.getOctokit(token);
 
   try {
     const { data } = await octokit.request('GET /repos/{owner}/{repo}/actions/artifacts/{artifact_id}', {

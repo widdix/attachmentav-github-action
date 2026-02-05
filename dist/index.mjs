@@ -32959,20 +32959,19 @@ function getOctokit(token, options, ...additionalPlugins) {
  * For artifacts: valid for 1 minute
  * For release assets: valid for 1 hour
  */
-async function getActualDownloadUrl(url, token) {
+async function getActualDownloadUrl(type, url, token) {
     debug(`Getting actual download URL from: ${url}`);
+    const acceptHeader = type === 'artifact' ? 'application/vnd.github+json' : 'application/octet-stream';
     try {
         const response = await fetch(url, {
             method: "GET",
             headers: {
                 ...(token ? { Authorization: `Bearer ${token}` } : {}),
-                Accept: url.includes('releases/assets') ? 'application/octet-stream' : "application/vnd.github+json",
+                Accept: acceptHeader,
                 'X-GitHub-Api-Version': '2022-11-28'
             },
             redirect: "manual", // Don't follow redirects
         });
-        debug(`response headers: ${Array.from(response.headers.entries()).join('\n')}`);
-        debug(`response payload: ${await response.text()}`);
         // For redirects (301, 302, 303, 307, 308), get Location header
         if (response.status >= 300 && response.status < 400) {
             const location = response.headers.get("Location");
@@ -32992,7 +32991,7 @@ async function getActualDownloadUrl(url, token) {
 async function getReleaseAsset(assetId, token) {
     const { owner, repo } = context.repo;
     debug(`Fetching release asset ${assetId} from ${owner}/${repo}`);
-    const octokit = getOctokit(token || process.env.GITHUB_TOKEN || "");
+    const octokit = getOctokit(token || '');
     try {
         const { data } = await octokit.request('GET /repos/{owner}/{repo}/releases/assets/{asset_id}', {
             owner,
@@ -33019,7 +33018,7 @@ async function getReleaseAsset(assetId, token) {
 async function getArtifact(artifactId, token) {
     const { owner, repo } = context.repo;
     debug(`Fetching artifact ${artifactId} from ${owner}/${repo}`);
-    const octokit = getOctokit(token || process.env.GITHUB_TOKEN || "");
+    const octokit = getOctokit(token);
     try {
         const { data } = await octokit.request('GET /repos/{owner}/{repo}/actions/artifacts/{artifact_id}', {
             owner,
@@ -33123,7 +33122,7 @@ async function handleArtifact(apiEndpoint, apiKey, artifactId, options) {
     const artifact = await getArtifact(id, options.token);
     info(`Artifact: ${artifact.name}, size: ${artifact.size_in_bytes} bytes`);
     // Get the actual download URL (valid for 1 minute)
-    const actualDownloadUrl = await getActualDownloadUrl(artifact.archive_download_url, options.token);
+    const actualDownloadUrl = await getActualDownloadUrl('artifact', artifact.archive_download_url, options.token);
     if (artifact.size_in_bytes < SYNC_DOWNLOAD_THRESHOLD) {
         // Use sync download API for files < 200MB
         info("Using sync download API (artifact < 200MB)");
@@ -33143,7 +33142,7 @@ async function handleReleaseAsset(apiEndpoint, apiKey, releaseAssetId, options) 
     const asset = await getReleaseAsset(id, options.token);
     info(`Release asset: ${asset.name}, size: ${asset.size} bytes`);
     // Get the actual download URL (valid for 1 hour)
-    const actualDownloadUrl = await getActualDownloadUrl(asset.url, options.token);
+    const actualDownloadUrl = await getActualDownloadUrl('release-asset', asset.url, options.token);
     if (asset.size < SYNC_DOWNLOAD_THRESHOLD) {
         // Use sync download API for files < 200MB
         info("Using sync download API (asset < 200MB)");

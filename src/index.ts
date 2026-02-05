@@ -148,6 +148,7 @@ async function handleArtifact(
 
   // Get the actual download URL (valid for 1 minute)
   const actualDownloadUrl = await getActualDownloadUrl(
+    'artifact',
     artifact.archive_download_url,
     options.token,
   );
@@ -184,6 +185,7 @@ async function handleReleaseAsset(
 
   // Get the actual download URL (valid for 1 hour)
   const actualDownloadUrl = await getActualDownloadUrl(
+    'release-asset',
     asset.url,
     options.token,
   );
