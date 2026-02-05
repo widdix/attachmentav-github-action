@@ -153,6 +153,48 @@ jobs:
             echo "Finding: ${{ steps.scan_artifact_large.outputs.finding }}"
           fi
 
+      # Test 6: Create release with large asset and scan asset
+      - name: Create release with test-data/ asset
+        id: create_release_large
+        run: |
+          # Zip test data folder
+          zip -r test-data.zip test-data/
+
+          # Create a large test release with test-data.zip as an asset
+          TAG_NAME="large-test-v${{ github.run_number }}"
+          gh release create "$TAG_NAME" test-data.zip \
+            --title "Large Test Release ${{ github.run_number }}" \
+            --notes "Automated large test release for attachmentAV scanning" \
+            --repo ${{ github.repository }}
+
+          # Get the asset ID
+          ASSET_ID=$(gh api repos/${{ github.repository }}/releases/tags/$TAG_NAME \
+            --jq '.assets[] | select(.name == "test-data.zip") | .id')
+          echo "asset_id=$ASSET_ID" >> $GITHUB_OUTPUT
+          echo "tag_name=$TAG_NAME" >> $GITHUB_OUTPUT
+          echo "Release created: $TAG_NAME"
+          echo "Asset ID: $ASSET_ID"
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Scan release asset
+        id: scan_asset_large
+        uses: ./
+        with:
+          release-asset-id: ${{ steps.create_release_large.outputs.asset_id }}
+          api-key: ${{ secrets.ATTACHMENTAV_API_KEY }}
+          token: ${{ github.token }}
+          fail-on-infected: true
+
+      - name: Display large release asset scan results
+        run: |
+          echo "Scan status: ${{ steps.scan_asset_large.outputs.status }}"
+          echo "File size: ${{ steps.scan_asset_large.outputs.file-size }} bytes"
+          echo "Real file type: ${{ steps.scan_asset_large.outputs.real-file-type }}"
+          if [ -n "${{ steps.scan_asset_large.outputs.finding }}" ]; then
+            echo "Finding: ${{ steps.scan_asset_large.outputs.finding }}"
+          fi
+
       # Cleanup: Delete test release
       - name: Cleanup test release
         if: steps.create_release.outcome == 'success'
@@ -174,3 +216,12 @@ jobs:
               -H "X-GitHub-Api-Version: 2022-11-28" \
               https://api.github.com/repos/${{ github.repository }}/actions/artifacts/${{ steps.upload_artifact_large.outputs.artifact-id }}
           fi
+
+      - name: Cleanup large release
+        if: steps.create_release_large.outcome == 'success'
+        run: |
+          if [ -n "${{ steps.create_release_large.outputs.tag_name }}" ]; then
+            gh release delete "${{ steps.create_release_large.outputs.tag_name }}" --yes --cleanup-tag || true
+          fi
+        env:
+          GH_TOKEN: ${{ github.token }}
