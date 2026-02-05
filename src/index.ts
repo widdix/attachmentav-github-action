@@ -123,7 +123,10 @@ async function handleArtifact(
       apiEndpoint,
       apiKey,
       actualDownloadUrl,
-      options
+      {
+        timeout: options.timeout,
+        pollingInterval: options.pollingInterval,
+      },
     );
   }
 }

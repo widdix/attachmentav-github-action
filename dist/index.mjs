@@ -33177,7 +33177,10 @@ async function handleArtifact(apiEndpoint, apiKey, artifactId, options) {
     else {
         // Use async API for files >= 200MB
         info("Using async API (artifact ≥ 200MB)");
-        return submitAndPollAsyncScan(apiEndpoint, apiKey, actualDownloadUrl, options);
+        return submitAndPollAsyncScan(apiEndpoint, apiKey, actualDownloadUrl, {
+            timeout: options.timeout,
+            pollingInterval: options.pollingInterval,
+        });
     }
 }
 async function handleReleaseAsset(apiEndpoint, apiKey, releaseAssetId, options) {
