@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+  pull_request: {}
 
 permissions:
   actions: write
@@ -102,6 +103,11 @@ jobs:
           fi
 
       # Test 4: Scan local file >10MB
+      - name: Generate 80MB local file
+        run: |
+          mkdir test-data
+          head -c 83886080 </dev/urandom >test-data/random-80mb-file
+
       - name: Scan local random-80mb-file
         id: scan_local_80mb
         uses: ./ # Uses the action in the root directory
