@@ -13,7 +13,7 @@ Supports scanning local repository files, GitHub Actions artifacts, and GitHub r
 
 ## Prerequisites
 
-1. **attachmentAV API Key**: Sign up at [attachmentAV](https://attachmentav.com) to get an API key
+1. **attachmentAV API Key**: Sign up at [attachmentAV](https://attachmentav.com/subscribe/api/) to get an API key
 2. **GitHub Token**: Required for downloading artifacts or releases of private repositories; can be
    a [personal access token (PAT)](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens)
    or the [GitHub Actions token](https://docs.github.com/en/actions/tutorials/authenticate-with-github_token)
@@ -294,6 +294,6 @@ MIT
 
 ## Support
 
-- Documentation: [attachmentAV Docs](https://attachmentav.com/docs)
+- Documentation: [attachmentAV Docs](https://attachmentav.com/help/virus-malware-scan-api/)
 - Issues: [GitHub Issues](https://github.com/widdix/attachmentav-github-action-malware-antivirus-scan/issues)
-- API Support: support@attachmentav.com
+- API Support: hello@attachmentav.com

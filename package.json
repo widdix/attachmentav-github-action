@@ -2,13 +2,13 @@
   "name": "attachmentav-github-action-malware-antivirus-scan",
   "version": "1.0.0",
   "description": "",
-  "homepage": "https://github.com/sh-cloud-software/attachmentav-github-action-malware-antivirus-scan#readme",
+  "homepage": "https://github.com/widdix/attachmentav-github-action-malware-antivirus-scan#readme",
   "bugs": {
-    "url": "https://github.com/sh-cloud-software/attachmentav-github-action-malware-antivirus-scan/issues"
+    "url": "https://github.com/widdix/attachmentav-github-action-malware-antivirus-scan/issues"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/sh-cloud-software/attachmentav-github-action-malware-antivirus-scan.git"
+    "url": "git+https://github.com/widdix/attachmentav-github-action-malware-antivirus-scan.git"
   },
   "license": "MIT",
   "author": "Sebastian Hesse <sebastian@sh-cloud.software>",
