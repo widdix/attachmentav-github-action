@@ -1,5 +1,8 @@
 name: attachmentAV Malware Scanner
 description: Scan files for malware and viruses using the attachmentAV API
+branding:
+  icon: search
+  color: purple
 
 inputs:
   local-file-path:
