@@ -26,7 +26,7 @@ Scan files directly from your repository. Supports files up to 100MB.
 
 ```yaml
 - name: Scan local file
-  uses: attachmentAV/scan@v1
+  uses: widdix/attachmentav-github-action-malware-antivirus-scan@v1
   with:
     local-file-path: path/to/file.zip
     api-key: ${{ secrets.ATTACHMENTAV_API_KEY }}
@@ -36,7 +36,7 @@ For files larger than 10MB, a GitHub token is required:
 
 ```yaml
 - name: Scan large local file
-  uses: attachmentAV/scan@v1
+  uses: widdix/attachmentav-github-action-malware-antivirus-scan@v1
   with:
     local-file-path: path/to/large-file.zip
     api-key: ${{ secrets.ATTACHMENTAV_API_KEY }}
@@ -70,7 +70,7 @@ automatically selects the appropriate malware scanning API based on artifact siz
     path: dist/
 
 - name: Scan artifact
-  uses: attachmentAV/scan@v1
+  uses: widdix/attachmentav-github-action-malware-antivirus-scan@v1
   with:
     artifact-id: ${{ steps.upload.outputs.artifact-id }}
     api-key: ${{ secrets.ATTACHMENTAV_API_KEY }}
@@ -94,7 +94,7 @@ size (sync API for <200MB, async API for ≥200MB).
 
 ```yaml
 - name: Scan release asset
-  uses: attachmentAV/scan@v1
+  uses: widdix/attachmentav-github-action-malware-antivirus-scan@v1
   with:
     release-asset-id: ${{ steps.get_asset.outputs.asset_id }}
     api-key: ${{ secrets.ATTACHMENTAV_API_KEY }}
@@ -162,7 +162,7 @@ jobs:
       # Example 1: Scan a local file
       - name: Scan build artifact
         id: scan_local
-        uses: attachmentAV/scan@v1
+        uses: widdix/attachmentav-github-action-malware-antivirus-scan@v1
         with:
           local-file-path: dist/app.zip
           api-key: ${{ secrets.ATTACHMENTAV_API_KEY }}
@@ -178,7 +178,7 @@ jobs:
 
       - name: Scan artifact
         id: scan_artifact
-        uses: attachmentAV/scan@v1
+        uses: widdix/attachmentav-github-action-malware-antivirus-scan@v1
         with:
           artifact-id: ${{ steps.upload.outputs.artifact-id }}
           api-key: ${{ secrets.ATTACHMENTAV_API_KEY }}
@@ -203,7 +203,7 @@ jobs:
 Use a different attachmentAV API region or endpoint:
 
 ```yaml
-- uses: attachmentAV/scan@v1
+- uses: widdix/attachmentav-github-action-malware-antivirus-scan@v1
   with:
     local-file-path: file.zip
     api-key: ${{ secrets.ATTACHMENTAV_API_KEY }}
@@ -215,7 +215,7 @@ Use a different attachmentAV API region or endpoint:
 For large files (≥200MB), adjust timeout and polling interval:
 
 ```yaml
-- uses: attachmentAV/scan@v1
+- uses: widdix/attachmentav-github-action-malware-antivirus-scan@v1
   with:
     release-asset-id: ${{ env.ASSET_ID }}
     api-key: ${{ secrets.ATTACHMENTAV_API_KEY }}
@@ -229,7 +229,7 @@ For large files (≥200MB), adjust timeout and polling interval:
 Allow workflow to continue even if malware is detected:
 
 ```yaml
-- uses: attachmentAV/scan@v1
+- uses: widdix/attachmentav-github-action-malware-antivirus-scan@v1
   with:
     local-file-path: file.zip
     api-key: ${{ secrets.ATTACHMENTAV_API_KEY }}
@@ -295,5 +295,5 @@ MIT
 ## Support
 
 - Documentation: [attachmentAV Docs](https://attachmentav.com/docs)
-- Issues: [GitHub Issues](https://github.com/attachmentAV/scan/issues)
+- Issues: [GitHub Issues](https://github.com/widdix/attachmentav-github-action-malware-antivirus-scan/issues)
 - API Support: support@attachmentav.com
